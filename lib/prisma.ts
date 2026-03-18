@@ -4,8 +4,10 @@ import { PrismaPg } from "@prisma/adapter-pg";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
+  const isProduction = process.env.NODE_ENV === "production";
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL!,
+    ssl: isProduction ? { rejectUnauthorized: false } : false,
   });
   return new PrismaClient({ adapter });
 }
