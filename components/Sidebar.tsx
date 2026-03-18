@@ -1,17 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
-type Tab = "products" | "campaigns";
-
-interface SidebarProps {
-  activeTab: Tab;
-  onTabChange: (tab: Tab) => void;
-}
-
-const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
+const navItems: { href: string; label: string; icon: React.ReactNode }[] = [
   {
-    id: "products",
+    href: "/product",
     label: "Products",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -20,7 +15,7 @@ const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
-    id: "campaigns",
+    href: "/campaign",
     label: "Campaigns",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -30,8 +25,9 @@ const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
   },
 ];
 
-export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+export default function Sidebar() {
   const router = useRouter();
+  const pathname = usePathname();
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -55,11 +51,11 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       {/* Nav */}
       <nav className="mt-2 flex-1 px-3">
         {navItems.map((item) => {
-          const isActive = activeTab === item.id;
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
-            <button
-              key={item.id}
-              onClick={() => onTabChange(item.id)}
+            <Link
+              key={item.href}
+              href={item.href}
               className={`group mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                 isActive
                   ? "border-l-[3px] border-blue-400 bg-white/10 pl-[9px] text-white"
@@ -70,7 +66,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 {item.icon}
               </span>
               {item.label}
-            </button>
+            </Link>
           );
         })}
       </nav>

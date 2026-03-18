@@ -22,7 +22,7 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
-        router.push("/");
+        router.push("/product");
       } else {
         const data = await res.json();
         setError(data.error || "Login failed");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ProductModal from "@/components/ProductModal";
 
 interface Product {
@@ -13,7 +13,7 @@ interface Product {
   createdAt: string;
 }
 
-export default function ProductsTab() {
+export default function ProductPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -39,7 +39,6 @@ export default function ProductsTab() {
 
   async function handleToggleEnabled(product: Product) {
     const newEnabled = !product.isEnabled;
-    // Optimistic update
     setProducts((prev) =>
       prev.map((p) => (p.id === product.id ? { ...p, isEnabled: newEnabled } : p))
     );
@@ -51,7 +50,6 @@ export default function ProductsTab() {
         body: JSON.stringify({ isEnabled: newEnabled }),
       });
       if (!res.ok) {
-        // Revert on failure
         setProducts((prev) =>
           prev.map((p) => (p.id === product.id ? { ...p, isEnabled: !newEnabled } : p))
         );
@@ -121,7 +119,6 @@ export default function ProductsTab() {
 
   return (
     <div>
-      {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Products</h1>
         <button
@@ -135,7 +132,6 @@ export default function ProductsTab() {
         </button>
       </div>
 
-      {/* Empty state */}
       {products.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-16">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
@@ -153,9 +149,7 @@ export default function ProductsTab() {
           </button>
         </div>
       ) : (
-        /* Product list */
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          {/* Table header */}
           <div className="grid grid-cols-[48px_1fr_1.5fr_100px_140px] items-center gap-4 border-b border-gray-100 bg-gray-50/80 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
             <span />
             <span>Name</span>
@@ -164,13 +158,11 @@ export default function ProductsTab() {
             <span className="text-right">Actions</span>
           </div>
 
-          {/* Rows */}
           {products.map((product) => (
             <div
               key={product.id}
               className="grid grid-cols-[48px_1fr_1.5fr_100px_140px] items-center gap-4 border-b border-gray-50 px-4 py-3 transition-colors last:border-b-0 hover:bg-gray-50/50"
             >
-              {/* Thumbnail */}
               <div className="h-10 w-10 overflow-hidden rounded-lg bg-gray-100">
                 <img
                   src={product.imageUrl1}
@@ -179,17 +171,14 @@ export default function ProductsTab() {
                 />
               </div>
 
-              {/* Name */}
               <span className="truncate text-sm font-medium text-gray-900">{product.name}</span>
 
-              {/* Description */}
               <span className="truncate text-sm text-gray-500">
                 {product.description.length > 60
                   ? product.description.slice(0, 60) + "..."
                   : product.description}
               </span>
 
-              {/* Status badge */}
               <span className="flex items-center gap-1.5">
                 <span
                   className={`h-2 w-2 rounded-full ${product.isEnabled ? "bg-emerald-400" : "bg-gray-300"}`}
@@ -199,7 +188,6 @@ export default function ProductsTab() {
                 </span>
               </span>
 
-              {/* Actions */}
               <div className="flex items-center justify-end gap-1">
                 <button
                   onClick={() => handleEdit(product)}
@@ -241,7 +229,6 @@ export default function ProductsTab() {
         </div>
       )}
 
-      {/* Modal */}
       {modalOpen && (
         <ProductModal
           product={editingProduct}

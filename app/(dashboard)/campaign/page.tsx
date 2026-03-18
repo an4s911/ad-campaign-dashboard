@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CampaignForm from "@/components/CampaignForm";
 
 interface CampaignListItem {
@@ -13,7 +13,7 @@ interface CampaignListItem {
   generatedImageCount: number;
 }
 
-export default function CampaignsTab() {
+export default function CampaignPage() {
   const [campaigns, setCampaigns] = useState<CampaignListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "create" | "edit">("list");
@@ -115,7 +115,6 @@ export default function CampaignsTab() {
     disabled: { dot: "bg-orange-400", text: "text-orange-600", label: "Disabled" },
   };
 
-  // Show form view
   if (view === "create" || view === "edit") {
     return (
       <CampaignForm
@@ -126,7 +125,6 @@ export default function CampaignsTab() {
     );
   }
 
-  // Loading state
   if (loading) {
     return (
       <div>
@@ -145,7 +143,6 @@ export default function CampaignsTab() {
 
   return (
     <div>
-      {/* Toast */}
       {toast && (
         <div
           className={`fixed right-6 top-6 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg transition-all ${
@@ -158,7 +155,6 @@ export default function CampaignsTab() {
         </div>
       )}
 
-      {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Campaigns</h1>
         <button
@@ -172,7 +168,6 @@ export default function CampaignsTab() {
         </button>
       </div>
 
-      {/* Empty state */}
       {campaigns.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-16">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
@@ -191,7 +186,6 @@ export default function CampaignsTab() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          {/* Table header */}
           <div className="grid grid-cols-[1.5fr_90px_90px_90px_110px_130px] items-center gap-4 border-b border-gray-100 bg-gray-50/80 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
             <span>Name</span>
             <span>Status</span>
