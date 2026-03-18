@@ -78,8 +78,9 @@ model CampaignStyle {
 model GeneratedImage {
   id                     String   @id @default(cuid())
   campaignId             String
-  imageUrl               String
+  imageUrl               String   @default("")
   replicatePredictionId  String?
+  status                 String   @default("pending") // pending, completed, failed
   isDeleted              Boolean  @default(false)
   createdAt              DateTime @default(now())
 

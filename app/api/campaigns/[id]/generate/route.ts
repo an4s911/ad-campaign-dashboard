@@ -62,48 +62,32 @@ export async function POST(
       `Store categories: ${JSON.stringify(campaign.targetStoreCategories)}`,
     ].join("\n");
 
-    // Generate images using Replicate (SDXL)
+    // Create predictions on Replicate without waiting for results
     const numImages = campaign.adCount;
-    const imagePromises = Array.from({ length: numImages }, async () => {
-      const output = await replicate.run(
-        "stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
-        {
+    const predictions = await Promise.all(
+      Array.from({ length: numImages }, () =>
+        replicate.predictions.create({
+          version:
+            "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
           input: {
             prompt,
             width: 1024,
             height: 1024,
             num_outputs: 1,
           },
-        }
-      );
-      return output;
-    });
+        })
+      )
+    );
 
-    const results = await Promise.all(imagePromises);
-
-    // Extract image URLs from results
-    const imageUrls: string[] = [];
-    for (const result of results) {
-      if (Array.isArray(result)) {
-        for (const item of result) {
-          if (typeof item === "string") {
-            imageUrls.push(item);
-          } else if (item && typeof item === "object" && "url" in item) {
-            imageUrls.push((item as { url: string }).url);
-          }
-        }
-      } else if (typeof result === "string") {
-        imageUrls.push(result);
-      }
-    }
-
-    // Save generated image records to the database
-    const generatedImages = await prisma.$transaction(
-      imageUrls.map((url) =>
+    // Save pending image records to the database
+    const pendingImages = await prisma.$transaction(
+      predictions.map((prediction) =>
         prisma.generatedImage.create({
           data: {
             campaignId: id,
-            imageUrl: url,
+            imageUrl: "",
+            replicatePredictionId: prediction.id,
+            status: "pending",
           },
         })
       )
@@ -111,8 +95,7 @@ export async function POST(
 
     return NextResponse.json({
       campaign: campaign.name,
-      prompt,
-      images: generatedImages,
+      images: pendingImages,
     });
   } catch (error) {
     console.error("Failed to generate images:", error);

@@ -10,7 +10,7 @@ export async function GET(
 
     const images = await prisma.generatedImage.findMany({
       where: { campaignId: id, isDeleted: false },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: "asc" },
     });
 
     return NextResponse.json(images);

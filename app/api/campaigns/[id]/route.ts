@@ -16,7 +16,7 @@ export async function GET(
         styles: true,
         generatedImages: {
           where: { isDeleted: false },
-          orderBy: { createdAt: "desc" },
+          orderBy: { createdAt: "asc" },
         },
       },
     });
@@ -127,7 +127,7 @@ export async function PUT(
           styles: true,
           generatedImages: {
             where: { isDeleted: false },
-            orderBy: { createdAt: "desc" },
+            orderBy: { createdAt: "asc" },
           },
         },
       });

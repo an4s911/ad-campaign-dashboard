@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import TogglePills from "@/components/TogglePills";
 import ImageUpload from "@/components/ImageUpload";
 
@@ -18,6 +18,7 @@ interface Product {
 interface GeneratedImage {
   id: string;
   imageUrl: string;
+  status: string; // pending, completed, failed
   campaignId: string;
   createdAt: string;
 }
@@ -56,6 +57,8 @@ const STYLE_PRESETS = [
   { name: "Bold & Vibrant", colors: ["#ef4444", "#f97316", "#eab308", "#22c55e"] },
   { name: "Premium Luxury", colors: ["#1c1917", "#292524", "#a16207", "#d4af37"] },
 ];
+
+const POLL_INTERVAL = 3000;
 
 // ---------- Component ----------
 
@@ -96,6 +99,9 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
   // Validation & Toast
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
+
+  // Polling ref
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function showToast(message: string, type: "error" | "success") {
     setToast({ message, type });
@@ -159,7 +165,7 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
           );
         }
 
-        // Generated images
+        // Generated images (includes pending ones)
         if (data.generatedImages?.length > 0) {
           setGeneratedImages(data.generatedImages);
         }
@@ -168,6 +174,44 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
       }
     })();
   }, [campaignId]);
+
+  // ---------- Polling for pending images ----------
+  const hasPending = generatedImages.some((img) => img.status === "pending");
+
+  useEffect(() => {
+    if (!hasPending || !savedCampaignId) {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+      return;
+    }
+
+    async function poll() {
+      try {
+        const res = await fetch(
+          `/api/campaigns/${savedCampaignId}/images/poll`
+        );
+        if (res.ok) {
+          const images: GeneratedImage[] = await res.json();
+          setGeneratedImages(images);
+        }
+      } catch {
+        // Silently retry on next interval
+      }
+    }
+
+    // Poll immediately once, then set interval
+    poll();
+    pollTimerRef.current = setInterval(poll, POLL_INTERVAL);
+
+    return () => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+  }, [hasPending, savedCampaignId]);
 
   // ---------- Validation ----------
   function validate(): boolean {
@@ -236,7 +280,7 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
     }
   }
 
-  // ---------- Generate images ----------
+  // ---------- Generate images (async – returns immediately) ----------
   async function handleGenerate() {
     let cid = savedCampaignId;
     if (!cid) {
@@ -248,14 +292,15 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
       const res = await fetch(`/api/campaigns/${cid}/generate`, { method: "POST" });
       if (res.ok) {
         const data = await res.json();
+        // Append pending image records – polling will update them as they complete
         setGeneratedImages((prev) => [...prev, ...data.images]);
-        showToast(`Generated ${data.images.length} images`, "success");
+        showToast(`Generating ${data.images.length} images...`, "success");
       } else {
         const data = await res.json();
         showToast(data.error || "Generation failed", "error");
       }
     } catch {
-      showToast("Failed to generate images", "error");
+      showToast("Failed to start generation", "error");
     } finally {
       setGenerating(false);
     }
@@ -285,7 +330,6 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
       cid = await saveCampaign();
       if (!cid) return;
     } else {
-      // Save latest changes first
       const saved = await saveCampaign();
       if (!saved) return;
     }
@@ -330,11 +374,16 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
   }
 
   // ---------- Preset toggle ----------
-  function togglePreset(name: string) {
+  function togglePreset(presetName: string) {
     setSelectedPresets((prev) =>
-      prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]
+      prev.includes(presetName) ? prev.filter((x) => x !== presetName) : [...prev, presetName]
     );
   }
+
+  // ---------- Computed ----------
+  const completedImages = generatedImages.filter((img) => img.status === "completed");
+  const pendingImages = generatedImages.filter((img) => img.status === "pending");
+  const failedImages = generatedImages.filter((img) => img.status === "failed");
 
   // ---------- Render ----------
   return (
@@ -467,13 +516,11 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
           <h2 className="mb-4 text-base font-semibold text-gray-900">Targeting</h2>
 
           <div className="space-y-5">
-            {/* Store Categories */}
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">Store Categories</label>
               <TogglePills options={STORE_CATEGORIES} selected={storeCategories} onChange={setStoreCategories} />
             </div>
 
-            {/* Age Range */}
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">Age Range</label>
               <div className="flex items-center gap-2">
@@ -499,13 +546,11 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
               </div>
             </div>
 
-            {/* Gender */}
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">Gender</label>
               <TogglePills options={GENDER_OPTIONS} selected={gender} onChange={setGender} />
             </div>
 
-            {/* Audience Tags */}
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">Audience Tags</label>
               <TogglePills options={AUDIENCE_TAGS} selected={audienceTags} onChange={setAudienceTags} />
@@ -563,7 +608,6 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
         <section className="rounded-xl border border-gray-200 bg-white p-6">
           <h2 className="mb-4 text-base font-semibold text-gray-900">Style Selection</h2>
 
-          {/* Mode toggle */}
           <div className="mb-5 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
             <button
               type="button"
@@ -591,7 +635,6 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
 
           {styleMode === "preset" ? (
             <div className="grid grid-cols-3 gap-3">
-              {/* --- Preset style cards --- */}
               {STYLE_PRESETS.map((preset) => {
                 const isSelected = selectedPresets.includes(preset.name);
                 return (
@@ -605,7 +648,6 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
                         : "border-gray-200 bg-white hover:border-gray-300"
                     }`}
                   >
-                    {/* Color preview */}
                     <div className="mb-3 flex gap-1.5">
                       {preset.colors.map((color, i) => (
                         <div
@@ -661,7 +703,7 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                Generating...
+                Starting...
               </>
             ) : (
               <>
@@ -673,29 +715,67 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
             )}
           </button>
 
+          {/* Progress indicator when generating */}
+          {pendingImages.length > 0 && (
+            <div className="mt-4 flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+              <svg className="h-5 w-5 shrink-0 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <p className="text-sm text-blue-700">
+                Generating images... {completedImages.length} of {completedImages.length + pendingImages.length} ready
+                {failedImages.length > 0 && <span className="text-red-500"> ({failedImages.length} failed)</span>}
+              </p>
+            </div>
+          )}
+
           {/* Image grid */}
           {generatedImages.length > 0 && (
             <div className="mt-6">
               <p className="mb-3 text-sm font-medium text-gray-700">
-                {generatedImages.length} image{generatedImages.length !== 1 && "s"} generated
+                {completedImages.length} image{completedImages.length !== 1 && "s"} ready
+                {pendingImages.length > 0 && `, ${pendingImages.length} generating`}
               </p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {generatedImages.map((img) => (
                   <div key={img.id} className="group relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-                    <img
-                      src={img.imageUrl}
-                      alt="Generated ad"
-                      className="aspect-square w-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteImage(img.id)}
-                      className="absolute right-2 top-2 rounded-md bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                      </svg>
-                    </button>
+                    {img.status === "completed" ? (
+                      <>
+                        <img
+                          src={img.imageUrl}
+                          alt="Generated ad"
+                          className="aspect-square w-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteImage(img.id)}
+                          className="absolute right-2 top-2 rounded-md bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                          </svg>
+                        </button>
+                      </>
+                    ) : img.status === "pending" ? (
+                      <div className="flex aspect-square items-center justify-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <svg className="h-6 w-6 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span className="text-xs text-gray-400">Generating...</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex aspect-square items-center justify-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                          </svg>
+                          <span className="text-xs text-red-400">Failed</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
