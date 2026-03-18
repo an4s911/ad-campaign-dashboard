@@ -23,12 +23,12 @@ export async function POST(request: NextRequest) {
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       const bytes = await file.arrayBuffer();
       const blob = await put(uniqueName, Buffer.from(bytes), {
-        access: "private",
+        access: "public",
         token: process.env.BLOB_READ_WRITE_TOKEN,
       });
 
       return NextResponse.json(
-        { url: blob.downloadUrl },
+        { url: blob.url },
         { status: 201 }
       );
     } else {
