@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
-import crypto from "crypto";
+import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,14 +19,30 @@ export async function POST(request: NextRequest) {
     const ext = path.extname(file.name) || ".jpg";
     const uniqueName = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`;
 
-    const blob = await put(uniqueName, file, {
-      access: "public",
-    });
+    // Use Vercel Blob in production, local filesystem in development
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const blob = await put(uniqueName, file, {
+        access: "public",
+      });
 
-    return NextResponse.json(
-      { url: blob.url },
-      { status: 201 }
-    );
+      return NextResponse.json(
+        { url: blob.url },
+        { status: 201 }
+      );
+    } else {
+      // Local filesystem fallback
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      await mkdir(uploadDir, { recursive: true });
+
+      const filePath = path.join(uploadDir, uniqueName);
+      const bytes = await file.arrayBuffer();
+      await writeFile(filePath, Buffer.from(bytes));
+
+      return NextResponse.json(
+        { url: `/uploads/${uniqueName}` },
+        { status: 201 }
+      );
+    }
   } catch (error) {
     console.error("Failed to upload file:", error);
     return NextResponse.json(
