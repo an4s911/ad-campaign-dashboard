@@ -6,6 +6,19 @@ import { usePathname } from "next/navigation";
 
 const navItems: { href: string; label: string; icon: React.ReactNode }[] = [
   {
+    href: "/dashboard",
+    label: "Dashboard",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3.75 4.5h6.75v6.75H3.75V4.5Zm9.75 0h6.75v4.5H13.5v-4.5Zm0 7.5h6.75v7.5H13.5V12Zm-9.75 2.25h6.75v5.25H3.75v-5.25Z"
+        />
+      </svg>
+    ),
+  },
+  {
     href: "/product",
     label: "Products",
     icon: (

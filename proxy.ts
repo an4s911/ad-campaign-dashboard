@@ -11,7 +11,7 @@ export function proxy(request: NextRequest) {
 
   // Redirect authenticated users away from /login
   if (pathname === "/login" && token) {
-    return NextResponse.redirect(new URL("/product", request.url));
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
