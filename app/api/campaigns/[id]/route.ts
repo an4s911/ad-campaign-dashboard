@@ -1,0 +1,161 @@
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const campaign = await prisma.campaign.findUnique({
+      where: { id },
+      include: {
+        products: { include: { product: true } },
+        ideas: { orderBy: { sortOrder: "asc" } },
+        styles: true,
+        generatedImages: {
+          where: { isDeleted: false },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    if (!campaign) {
+      return NextResponse.json(
+        { error: "Campaign not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(campaign);
+  } catch (error) {
+    console.error("Failed to fetch campaign:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch campaign" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const {
+      name,
+      adCount,
+      targetStoreCategories,
+      targetAgeMin,
+      targetAgeMax,
+      targetGender,
+      targetTags,
+      productIds,
+      ideas,
+      styles,
+    } = body;
+
+    const campaign = await prisma.$transaction(async (tx) => {
+      await tx.campaign.update({
+        where: { id },
+        data: {
+          ...(name !== undefined && { name }),
+          ...(adCount !== undefined && { adCount }),
+          ...(targetStoreCategories !== undefined && {
+            targetStoreCategories,
+          }),
+          ...(targetAgeMin !== undefined && { targetAgeMin }),
+          ...(targetAgeMax !== undefined && { targetAgeMax }),
+          ...(targetGender !== undefined && { targetGender }),
+          ...(targetTags !== undefined && { targetTags }),
+        },
+      });
+
+      if (productIds !== undefined) {
+        await tx.campaignProduct.deleteMany({ where: { campaignId: id } });
+        if (Array.isArray(productIds) && productIds.length > 0) {
+          await tx.campaignProduct.createMany({
+            data: productIds.map((productId: string) => ({
+              campaignId: id,
+              productId,
+            })),
+          });
+        }
+      }
+
+      if (ideas !== undefined) {
+        await tx.campaignIdea.deleteMany({ where: { campaignId: id } });
+        if (Array.isArray(ideas) && ideas.length > 0) {
+          await tx.campaignIdea.createMany({
+            data: ideas.map((description: string, index: number) => ({
+              campaignId: id,
+              description,
+              sortOrder: index,
+            })),
+          });
+        }
+      }
+
+      if (styles !== undefined) {
+        await tx.campaignStyle.deleteMany({ where: { campaignId: id } });
+        if (Array.isArray(styles) && styles.length > 0) {
+          await tx.campaignStyle.createMany({
+            data: styles.map(
+              (style: {
+                styleType: string;
+                presetName?: string;
+                uploadedImageUrl?: string;
+              }) => ({
+                campaignId: id,
+                styleType: style.styleType,
+                presetName: style.presetName ?? null,
+                uploadedImageUrl: style.uploadedImageUrl ?? null,
+              })
+            ),
+          });
+        }
+      }
+
+      return tx.campaign.findUnique({
+        where: { id },
+        include: {
+          products: { include: { product: true } },
+          ideas: { orderBy: { sortOrder: "asc" } },
+          styles: true,
+          generatedImages: {
+            where: { isDeleted: false },
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      });
+    });
+
+    return NextResponse.json(campaign);
+  } catch (error) {
+    console.error("Failed to update campaign:", error);
+    return NextResponse.json(
+      { error: "Failed to update campaign" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    await prisma.campaign.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete campaign:", error);
+    return NextResponse.json(
+      { error: "Failed to delete campaign" },
+      { status: 500 }
+    );
+  }
+}
