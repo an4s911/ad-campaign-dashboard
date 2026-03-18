@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import Replicate from "replicate";
 import prisma from "@/lib/prisma";
+
+const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
 export async function POST(
   _request: NextRequest,
@@ -25,7 +28,6 @@ export async function POST(
     }
 
     // Build prompt from campaign data
-    // TODO: Replace this with actual Replicate API integration
     const productDescriptions = campaign.products
       .map((cp) => `- ${cp.product.name}: ${cp.product.description}`)
       .join("\n");
@@ -43,43 +45,65 @@ export async function POST(
       .join("\n");
 
     const prompt = [
-      `Campaign: ${campaign.name}`,
-      `Number of ads requested: ${campaign.adCount}`,
+      `Create a professional advertising image for the campaign "${campaign.name}".`,
       "",
-      "Products:",
+      "Products featured:",
       productDescriptions,
       "",
-      "Creative Ideas:",
+      "Creative direction:",
       ideaDescriptions,
       "",
-      "Style References:",
+      "Style:",
       styleDescriptions,
       "",
-      `Target Store Categories: ${JSON.stringify(campaign.targetStoreCategories)}`,
-      `Target Age: ${campaign.targetAgeMin ?? "any"} - ${campaign.targetAgeMax ?? "any"}`,
-      `Target Gender: ${JSON.stringify(campaign.targetGender)}`,
-      `Target Tags: ${JSON.stringify(campaign.targetTags)}`,
+      `Target audience: ${JSON.stringify(campaign.targetTags)}`,
+      `Target gender: ${JSON.stringify(campaign.targetGender)}`,
+      `Age range: ${campaign.targetAgeMin ?? "any"} - ${campaign.targetAgeMax ?? "any"}`,
+      `Store categories: ${JSON.stringify(campaign.targetStoreCategories)}`,
     ].join("\n");
 
-    // TODO: Send prompt to Replicate API and get generated image URLs back
-    // Example Replicate integration:
-    //   const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
-    //   const output = await replicate.run("model-name", { input: { prompt } });
+    // Generate images using Replicate (SDXL)
+    const numImages = campaign.adCount;
+    const imagePromises = Array.from({ length: numImages }, async () => {
+      const output = await replicate.run(
+        "stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
+        {
+          input: {
+            prompt,
+            width: 1024,
+            height: 1024,
+            num_outputs: 1,
+          },
+        }
+      );
+      return output;
+    });
 
-    // Mock response: generate 10 placeholder image URLs
-    const placeholderImages = Array.from({ length: 10 }, (_, i) => ({
-      imageUrl: `https://placehold.co/1024x1024/png?text=Ad+${i + 1}`,
-      replicatePredictionId: `mock-prediction-${id}-${i + 1}`,
-    }));
+    const results = await Promise.all(imagePromises);
+
+    // Extract image URLs from results
+    const imageUrls: string[] = [];
+    for (const result of results) {
+      if (Array.isArray(result)) {
+        for (const item of result) {
+          if (typeof item === "string") {
+            imageUrls.push(item);
+          } else if (item && typeof item === "object" && "url" in item) {
+            imageUrls.push((item as { url: string }).url);
+          }
+        }
+      } else if (typeof result === "string") {
+        imageUrls.push(result);
+      }
+    }
 
     // Save generated image records to the database
     const generatedImages = await prisma.$transaction(
-      placeholderImages.map((img) =>
+      imageUrls.map((url) =>
         prisma.generatedImage.create({
           data: {
             campaignId: id,
-            imageUrl: img.imageUrl,
-            replicatePredictionId: img.replicatePredictionId,
+            imageUrl: url,
           },
         })
       )
