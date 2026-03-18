@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(
-        { url: blob.url },
+        { url: blob.downloadUrl },
         { status: 201 }
       );
     } else {
