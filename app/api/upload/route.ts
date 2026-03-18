@@ -21,8 +21,10 @@ export async function POST(request: NextRequest) {
 
     // Use Vercel Blob in production, local filesystem in development
     if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const blob = await put(uniqueName, file, {
+      const bytes = await file.arrayBuffer();
+      const blob = await put(uniqueName, Buffer.from(bytes), {
         access: "public",
+        token: process.env.BLOB_READ_WRITE_TOKEN,
       });
 
       return NextResponse.json(
