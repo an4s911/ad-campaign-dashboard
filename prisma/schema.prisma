@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @db.Text
+  imageUrl1   String
+  imageUrl2   String?
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaigns CampaignProduct[]
+}
+
+model Campaign {
+  id                    String   @id @default(cuid())
+  name                  String
+  adCount               Int
+  status                String   @default("draft")
+  targetStoreCategories Json
+  targetAgeMin          Int?
+  targetAgeMax          Int?
+  targetGender          Json
+  targetTags            Json
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  products        CampaignProduct[]
+  ideas           CampaignIdea[]
+  styles          CampaignStyle[]
+  generatedImages GeneratedImage[]
+}
+
+model CampaignProduct {
+  id         String @id @default(cuid())
+  campaignId String
+  productId  String
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, productId])
+  @@index([campaignId])
+  @@index([productId])
+}
+
+model CampaignIdea {
+  id          String @id @default(cuid())
+  campaignId  String
+  description String @db.Text
+  sortOrder   Int    @default(0)
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+model CampaignStyle {
+  id               String  @id @default(cuid())
+  campaignId       String
+  styleType        String
+  presetName       String?
+  uploadedImageUrl String?
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+model GeneratedImage {
+  id                     String   @id @default(cuid())
+  campaignId             String
+  imageUrl               String
+  replicatePredictionId  String?
+  isDeleted              Boolean  @default(false)
+  createdAt              DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
