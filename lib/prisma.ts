@@ -10,6 +10,7 @@ function createPrismaClient() {
     connectionString: process.env.DATABASE_URL!,
     ssl: isProduction ? { rejectUnauthorized: false } : undefined,
   });
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const adapter = new PrismaPg(pool as any);
   return new PrismaClient({ adapter });
