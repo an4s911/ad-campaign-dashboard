@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import ProductModal from "@/components/ProductModal";
+import Link from "next/link";
 
 interface Product {
   id: string;
@@ -16,8 +16,6 @@ interface Product {
 export default function ProductPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -77,30 +75,6 @@ export default function ProductPage() {
     }
   }
 
-  function handleEdit(product: Product) {
-    setEditingProduct(product);
-    setModalOpen(true);
-  }
-
-  function handleAdd() {
-    setEditingProduct(null);
-    setModalOpen(true);
-  }
-
-  function handleModalClose() {
-    setModalOpen(false);
-    setEditingProduct(null);
-  }
-
-  function handleProductSaved(saved: Product) {
-    if (editingProduct) {
-      setProducts((prev) => prev.map((p) => (p.id === saved.id ? saved : p)));
-    } else {
-      setProducts((prev) => [saved, ...prev]);
-    }
-    handleModalClose();
-  }
-
   if (loading) {
     return (
       <div>
@@ -121,15 +95,15 @@ export default function ProductPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-        <button
-          onClick={handleAdd}
+        <Link
+          href="/product/new"
           className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           Add Product
-        </button>
+        </Link>
       </div>
 
       {products.length === 0 ? (
@@ -141,12 +115,12 @@ export default function ProductPage() {
           </div>
           <h3 className="mb-1 text-base font-semibold text-gray-700">No products yet</h3>
           <p className="mb-4 text-sm text-gray-400">Add your first product to get started.</p>
-          <button
-            onClick={handleAdd}
+          <Link
+            href="/product/new"
             className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
           >
             Add First Product
-          </button>
+          </Link>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -189,15 +163,15 @@ export default function ProductPage() {
               </span>
 
               <div className="flex items-center justify-end gap-1">
-                <button
-                  onClick={() => handleEdit(product)}
+                <Link
+                  href={`/product/${product.id}`}
                   title="Edit"
                   className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
                   </svg>
-                </button>
+                </Link>
                 <button
                   onClick={() => handleToggleEnabled(product)}
                   title={product.isEnabled ? "Disable" : "Enable"}
@@ -227,14 +201,6 @@ export default function ProductPage() {
             </div>
           ))}
         </div>
-      )}
-
-      {modalOpen && (
-        <ProductModal
-          product={editingProduct}
-          onClose={handleModalClose}
-          onSaved={handleProductSaved}
-        />
       )}
     </div>
   );

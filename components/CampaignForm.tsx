@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import TogglePills from "@/components/TogglePills";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -32,8 +33,6 @@ interface Style {
 
 interface CampaignFormProps {
   campaignId: string | null; // null = create, string = edit
-  onDone: () => void;
-  onCancel: () => void;
 }
 
 // ---------- Constants ----------
@@ -55,7 +54,8 @@ const POLL_INTERVAL = 3000;
 
 // ---------- Component ----------
 
-export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignFormProps) {
+export default function CampaignForm({ campaignId }: CampaignFormProps) {
+  const router = useRouter();
   const isEditing = !!campaignId;
 
   // Section 1 – Basic Info
@@ -333,7 +333,7 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
       });
       if (res.ok) {
         showToast("Campaign activated!", "success");
-        setTimeout(onDone, 600);
+        setTimeout((() => router.push("/campaign")), 600);
       } else {
         showToast("Failed to activate campaign", "error");
       }
@@ -386,7 +386,7 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
       {/* Header */}
       <div className="mb-8 flex items-center gap-4">
         <button
-          onClick={onCancel}
+          onClick={(() => router.push("/campaign"))}
           className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -768,7 +768,7 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
           <div className="mt-6 flex items-center gap-3 border-t border-gray-100 pt-6">
             <button
               type="button"
-              onClick={onCancel}
+              onClick={(() => router.push("/campaign"))}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
             >
               Cancel

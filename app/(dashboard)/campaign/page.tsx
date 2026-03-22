@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import CampaignForm from "@/components/CampaignForm";
+import Link from "next/link";
 
 interface CampaignListItem {
   id: string;
@@ -16,8 +16,6 @@ interface CampaignListItem {
 export default function CampaignPage() {
   const [campaigns, setCampaigns] = useState<CampaignListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"list" | "create" | "edit">("list");
-  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
 
   const fetchCampaigns = useCallback(async () => {
@@ -84,23 +82,6 @@ export default function CampaignPage() {
     }
   }
 
-  function handleEdit(campaign: CampaignListItem) {
-    setEditingCampaignId(campaign.id);
-    setView("edit");
-  }
-
-  function handleFormDone() {
-    setView("list");
-    setEditingCampaignId(null);
-    setLoading(true);
-    fetchCampaigns();
-  }
-
-  function handleFormCancel() {
-    setView("list");
-    setEditingCampaignId(null);
-  }
-
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("en-US", {
       month: "short",
@@ -114,16 +95,6 @@ export default function CampaignPage() {
     active: { dot: "bg-emerald-400", text: "text-emerald-600", label: "Active" },
     disabled: { dot: "bg-orange-400", text: "text-orange-600", label: "Disabled" },
   };
-
-  if (view === "create" || view === "edit") {
-    return (
-      <CampaignForm
-        campaignId={editingCampaignId}
-        onDone={handleFormDone}
-        onCancel={handleFormCancel}
-      />
-    );
-  }
 
   if (loading) {
     return (
@@ -157,15 +128,15 @@ export default function CampaignPage() {
 
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Campaigns</h1>
-        <button
-          onClick={() => setView("create")}
+        <Link
+          href="/campaign/new"
           className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           New Campaign
-        </button>
+        </Link>
       </div>
 
       {campaigns.length === 0 ? (
@@ -177,12 +148,12 @@ export default function CampaignPage() {
           </div>
           <h3 className="mb-1 text-base font-semibold text-gray-700">No campaigns yet</h3>
           <p className="mb-4 text-sm text-gray-400">Create your first campaign to start generating ads.</p>
-          <button
-            onClick={() => setView("create")}
+          <Link
+            href="/campaign/new"
             className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
           >
             Create First Campaign
-          </button>
+          </Link>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -211,15 +182,15 @@ export default function CampaignPage() {
                 <span className="text-sm text-gray-500">{campaign.generatedImageCount}</span>
                 <span className="text-sm text-gray-400">{formatDate(campaign.createdAt)}</span>
                 <div className="flex items-center justify-end gap-1">
-                  <button
-                    onClick={() => handleEdit(campaign)}
+                  <Link
+                    href={`/campaign/${campaign.id}`}
                     title="Edit"
                     className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
                     </svg>
-                  </button>
+                  </Link>
                   <button
                     onClick={() => handleToggleStatus(campaign)}
                     title={campaign.status === "active" ? "Disable" : "Activate"}
