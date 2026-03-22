@@ -103,18 +103,10 @@ export async function POST(request: NextRequest) {
 
       if (styles && Array.isArray(styles) && styles.length > 0) {
         await tx.campaignStyle.createMany({
-          data: styles.map(
-            (style: {
-              styleType: string;
-              presetName?: string;
-              uploadedImageUrl?: string;
-            }) => ({
-              campaignId: created.id,
-              styleType: style.styleType,
-              presetName: style.presetName ?? null,
-              uploadedImageUrl: style.uploadedImageUrl ?? null,
-            })
-          ),
+          data: styles.map((styleId: string) => ({
+            campaignId: created.id,
+            styleId,
+          })),
         });
       }
 
@@ -123,7 +115,7 @@ export async function POST(request: NextRequest) {
         include: {
           products: { include: { product: true } },
           ideas: { orderBy: { sortOrder: "asc" } },
-          styles: true,
+          styles: { include: { style: true } },
         },
       });
     });

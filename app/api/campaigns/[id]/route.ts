@@ -13,7 +13,7 @@ export async function GET(
       include: {
         products: { include: { product: true } },
         ideas: { orderBy: { sortOrder: "asc" } },
-        styles: true,
+        styles: { include: { style: true } },
         generatedImages: {
           where: { isDeleted: false },
           orderBy: { createdAt: "asc" },
@@ -103,18 +103,10 @@ export async function PUT(
         await tx.campaignStyle.deleteMany({ where: { campaignId: id } });
         if (Array.isArray(styles) && styles.length > 0) {
           await tx.campaignStyle.createMany({
-            data: styles.map(
-              (style: {
-                styleType: string;
-                presetName?: string;
-                uploadedImageUrl?: string;
-              }) => ({
-                campaignId: id,
-                styleType: style.styleType,
-                presetName: style.presetName ?? null,
-                uploadedImageUrl: style.uploadedImageUrl ?? null,
-              })
-            ),
+            data: styles.map((styleId: string) => ({
+              campaignId: id,
+              styleId,
+            })),
           });
         }
       }
@@ -124,7 +116,7 @@ export async function PUT(
         include: {
           products: { include: { product: true } },
           ideas: { orderBy: { sortOrder: "asc" } },
-          styles: true,
+          styles: { include: { style: true } },
           generatedImages: {
             where: { isDeleted: false },
             orderBy: { createdAt: "asc" },

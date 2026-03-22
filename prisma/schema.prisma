@@ -63,16 +63,28 @@ model CampaignIdea {
   @@index([campaignId])
 }
 
+model Style {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  prompt    String   @db.Text
+  isEnabled Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaignStyles CampaignStyle[]
+}
+
 model CampaignStyle {
-  id               String  @id @default(cuid())
-  campaignId       String
-  styleType        String
-  presetName       String?
-  uploadedImageUrl String?
+  id         String @id @default(cuid())
+  campaignId String
+  styleId    String
 
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  style    Style    @relation(fields: [styleId], references: [id], onDelete: Cascade)
 
+  @@unique([campaignId, styleId])
   @@index([campaignId])
+  @@index([styleId])
 }
 
 model GeneratedImage {

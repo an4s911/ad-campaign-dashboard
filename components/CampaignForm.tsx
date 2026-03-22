@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import TogglePills from "@/components/TogglePills";
-import ImageUpload from "@/components/ImageUpload";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // ---------- Types ----------
 
@@ -23,10 +24,10 @@ interface GeneratedImage {
   createdAt: string;
 }
 
-interface StyleEntry {
-  styleType: "preset" | "uploaded";
-  presetName?: string;
-  uploadedImageUrl?: string;
+interface Style {
+  id: string;
+  name: string;
+  prompt: string;
 }
 
 interface CampaignFormProps {
@@ -48,14 +49,6 @@ const AUDIENCE_TAGS = [
   "Businessmen", "College Students", "Families", "Couples", "Gym Goers",
   "Young Professionals", "Seniors", "Parents", "Teens", "Commuters",
   "Tourists", "Luxury Shoppers", "Budget Shoppers",
-];
-
-// --- Style Presets ---
-// Add more presets here: { name: "...", colors: ["...", "..."] }
-const STYLE_PRESETS = [
-  { name: "Minimalist Clean", colors: ["#f8fafc", "#e2e8f0", "#94a3b8", "#475569"] },
-  { name: "Bold & Vibrant", colors: ["#ef4444", "#f97316", "#eab308", "#22c55e"] },
-  { name: "Premium Luxury", colors: ["#1c1917", "#292524", "#a16207", "#d4af37"] },
 ];
 
 const POLL_INTERVAL = 3000;
@@ -85,9 +78,10 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
   const [ideas, setIdeas] = useState<string[]>([""]);
 
   // Section 5 – Styles
-  const [styleMode, setStyleMode] = useState<"preset" | "upload">("preset");
-  const [selectedPresets, setSelectedPresets] = useState<string[]>([]);
-  const [uploadedStyleUrl, setUploadedStyleUrl] = useState<string | null>(null);
+  const [allStyles, setAllStyles] = useState<Style[]>([]);
+  const [selectedStyleIds, setSelectedStyleIds] = useState<string[]>([]);
+  const [expandedStyleId, setExpandedStyleId] = useState<string | null>(null);
+  const [stylesLoading, setStylesLoading] = useState(true);
 
   // Section 6 – Generate & Review
   const [savedCampaignId, setSavedCampaignId] = useState<string | null>(campaignId);
@@ -120,9 +114,22 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
     }
   }, []);
 
+  // ---------- Fetch styles ----------
+  const fetchStyles = useCallback(async () => {
+    try {
+      const res = await fetch("/api/styles");
+      if (res.ok) setAllStyles(await res.json());
+    } catch {
+      showToast("Failed to load styles", "error");
+    } finally {
+      setStylesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+    fetchStyles();
+  }, [fetchProducts, fetchStyles]);
 
   // ---------- Load existing campaign for edit ----------
   useEffect(() => {
@@ -149,21 +156,9 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
         );
 
         // Styles
-        const presetStyles = data.styles.filter(
-          (s: { styleType: string }) => s.styleType === "preset"
+        setSelectedStyleIds(
+          data.styles.map((cs: { styleId: string }) => cs.styleId)
         );
-        const uploadedStyle = data.styles.find(
-          (s: { styleType: string }) => s.styleType === "uploaded"
-        );
-        if (uploadedStyle) {
-          setStyleMode("upload");
-          setUploadedStyleUrl(uploadedStyle.uploadedImageUrl);
-        } else {
-          setStyleMode("preset");
-          setSelectedPresets(
-            presetStyles.map((s: { presetName: string }) => s.presetName)
-          );
-        }
 
         // Generated images (includes pending ones)
         if (data.generatedImages?.length > 0) {
@@ -220,16 +215,14 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
     if (!adCount || adCount < 1) errs.adCount = "Must be at least 1";
     if (selectedProductIds.length === 0) errs.products = "Select at least one product";
     if (ideas.every((i) => !i.trim())) errs.ideas = "Add at least one idea";
+    if (selectedStyleIds.length === 0) errs.styles = "Select at least one style";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
 
   // ---------- Build styles array ----------
-  function buildStyles(): StyleEntry[] {
-    if (styleMode === "upload" && uploadedStyleUrl) {
-      return [{ styleType: "uploaded", uploadedImageUrl: uploadedStyleUrl }];
-    }
-    return selectedPresets.map((p) => ({ styleType: "preset", presetName: p }));
+  function buildStyles(): string[] {
+    return selectedStyleIds;
   }
 
   // ---------- Save campaign (create or update) ----------
@@ -282,11 +275,9 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
 
   // ---------- Generate images (async – returns immediately) ----------
   async function handleGenerate() {
-    let cid = savedCampaignId;
-    if (!cid) {
-      cid = await saveCampaign();
-      if (!cid) return;
-    }
+    // Always save latest form state before generating
+    const cid = await saveCampaign();
+    if (!cid) return;
     setGenerating(true);
     try {
       const res = await fetch(`/api/campaigns/${cid}/generate`, { method: "POST" });
@@ -371,13 +362,6 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
     if (errors.products) setErrors((e) => ({ ...e, products: "" }));
-  }
-
-  // ---------- Preset toggle ----------
-  function togglePreset(presetName: string) {
-    setSelectedPresets((prev) =>
-      prev.includes(presetName) ? prev.filter((x) => x !== presetName) : [...prev, presetName]
-    );
   }
 
   // ---------- Computed ----------
@@ -606,82 +590,80 @@ export default function CampaignForm({ campaignId, onDone, onCancel }: CampaignF
 
         {/* ============ Section 5 – Style Selection ============ */}
         <section className="rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="mb-4 text-base font-semibold text-gray-900">Style Selection</h2>
+          <h2 className="mb-1 text-base font-semibold text-gray-900">
+            Style Selection <span className="text-red-400">*</span>
+          </h2>
+          <p className="mb-4 text-sm text-gray-400">
+            Choose one or more visual styles for your ad images.
+          </p>
+          {errors.styles && <p className="mb-3 text-xs text-red-500">{errors.styles}</p>}
 
-          <div className="mb-5 inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
-            <button
-              type="button"
-              onClick={() => setStyleMode("preset")}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                styleMode === "preset"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Choose from Presets
-            </button>
-            <button
-              type="button"
-              onClick={() => setStyleMode("upload")}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                styleMode === "upload"
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Upload Reference Image
-            </button>
-          </div>
-
-          {styleMode === "preset" ? (
+          {stylesLoading ? (
             <div className="grid grid-cols-3 gap-3">
-              {STYLE_PRESETS.map((preset) => {
-                const isSelected = selectedPresets.includes(preset.name);
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-40 animate-pulse rounded-lg bg-gray-100" />
+              ))}
+            </div>
+          ) : allStyles.length === 0 ? (
+            <p className="text-sm text-gray-400">No styles available.</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              {allStyles.map((style) => {
+                const isSelected = selectedStyleIds.includes(style.id);
+                const isExpanded = expandedStyleId === style.id;
                 return (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    onClick={() => togglePreset(preset.name)}
-                    className={`rounded-lg border-2 p-4 text-left transition-all ${
-                      isSelected
-                        ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500/20"
-                        : "border-gray-200 bg-white hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="mb-3 flex gap-1.5">
-                      {preset.colors.map((color, i) => (
+                  <div key={style.id} className="flex flex-col">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedStyleIds((prev) =>
+                          prev.includes(style.id)
+                            ? prev.filter((x) => x !== style.id)
+                            : [...prev, style.id]
+                        );
+                        if (errors.styles) setErrors((e) => ({ ...e, styles: "" }));
+                      }}
+                      className={`rounded-lg border-2 p-4 text-left transition-all ${
+                        isSelected
+                          ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500/20"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-900">{style.name}</p>
                         <div
-                          key={i}
-                          className="h-8 flex-1 rounded"
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-900">{preset.name}</p>
-                      <div
-                        className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
-                          isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300"
-                        }`}
-                      >
-                        {isSelected && (
-                          <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                          </svg>
-                        )}
+                          className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
+                            isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                          }`}
+                        >
+                          {isSelected && (
+                            <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                      <p className="text-xs text-gray-500 line-clamp-3">
+                        {style.prompt.replace(/[#*`[\]]/g, "").slice(0, 120)}...
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedStyleId(isExpanded ? null : style.id)}
+                      className="mt-1 text-xs text-blue-500 hover:text-blue-600 text-left"
+                    >
+                      {isExpanded ? "Hide details" : "View full style guide"}
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-4 prose prose-sm max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {style.prompt}
+                        </ReactMarkdown>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
-            </div>
-          ) : (
-            <div className="max-w-xs">
-              <ImageUpload
-                label="Reference Image"
-                value={uploadedStyleUrl}
-                onChange={setUploadedStyleUrl}
-              />
             </div>
           )}
         </section>
