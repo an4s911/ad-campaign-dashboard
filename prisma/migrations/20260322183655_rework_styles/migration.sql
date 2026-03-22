@@ -8,6 +8,9 @@
   - Added the required column `styleId` to the `CampaignStyle` table without a default value. This is not possible if the table is not empty.
 
 */
+-- Delete existing rows since they can't be mapped to the new Style table
+DELETE FROM "CampaignStyle";
+
 -- AlterTable
 ALTER TABLE "CampaignStyle" DROP COLUMN "presetName",
 DROP COLUMN "styleType",
