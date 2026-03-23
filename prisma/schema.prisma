@@ -87,6 +87,19 @@ model CampaignStyle {
   @@index([styleId])
 }
 
+model User {
+  id                String    @id @default(cuid())
+  fullName          String
+  username          String    @unique
+  email             String?
+  passwordHash      String
+  role              String    @default("admin")
+  isActive          Boolean   @default(true)
+  passwordChangedAt DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
 model GeneratedImage {
   id                     String   @id @default(cuid())
   campaignId             String

@@ -1,33 +1,53 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { verifySessionToken, COOKIE_NAME } from "@/lib/auth";
 
-const COOKIE_NAME = "auth_token";
+const PUBLIC_PATHS = [
+  "/login",
+  "/setup",
+  "/api/auth/login",
+  "/api/auth/setup",
+  "/api/auth/logout",
+  "/uploads",
+];
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/logout", "/uploads"];
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
+}
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const token = request.cookies.get(COOKIE_NAME)?.value;
+  const session = token ? verifySessionToken(token) : null;
+  const isAuthenticated = session !== null;
 
-  // Redirect authenticated users away from /login
-  if (pathname === "/login" && token) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
+  // We rely on Server Components (like app/login/page.tsx) to redirect logged-in users 
+  // since they can fully verify the session against the database.
 
-  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
+  // Public paths don't require auth
+  if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
-  if (!token) {
+  // Protected paths require auth
+  if (!isAuthenticated) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    return NextResponse.redirect(new URL("/login", request.url));
+
+    const loginUrl = new URL("/login", request.url);
+    if (pathname !== "/") {
+      loginUrl.searchParams.set("from", pathname);
+    }
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)"],
 };
