@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import TogglePills from "@/components/TogglePills";
 import ReactMarkdown from "react-markdown";
@@ -51,6 +52,7 @@ const AUDIENCE_TAGS = [
 ];
 
 const POLL_INTERVAL = 3000;
+const passthroughImageLoader = ({ src }: { src: string }) => src;
 
 // ---------- Component ----------
 
@@ -470,8 +472,16 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                           : "border-border bg-card text-card-foreground hover:border-border"
                       }`}
                     >
-                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
-                        <img src={product.imageUrl1} alt={product.name} className="h-full w-full object-cover" />
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+                        <Image
+                          src={product.imageUrl1}
+                          alt={product.name}
+                          fill
+                          sizes="48px"
+                          loader={passthroughImageLoader}
+                          unoptimized
+                          className="object-cover"
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-foreground">{product.name}</p>
@@ -723,10 +733,14 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   <div key={img.id} className="group relative overflow-hidden rounded-lg border border-border bg-muted">
                     {img.status === "completed" ? (
                       <>
-                        <img
+                        <Image
                           src={img.imageUrl}
                           alt="Generated ad"
-                          className="aspect-square w-full object-cover"
+                          fill
+                          sizes="(min-width: 640px) 33vw, 50vw"
+                          loader={passthroughImageLoader}
+                          unoptimized
+                          className="object-cover"
                         />
                         <button
                           type="button"

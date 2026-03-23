@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 interface Product {
@@ -12,6 +13,8 @@ interface Product {
   isEnabled: boolean;
   createdAt: string;
 }
+
+const passthroughImageLoader = ({ src }: { src: string }) => src;
 
 export default function ProductPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -137,11 +140,15 @@ export default function ProductPage() {
               key={product.id}
               className="grid grid-cols-[48px_1fr_1.5fr_100px_140px] items-center gap-4 border-b border-border/50 px-4 py-3 transition-colors last:border-b-0 hover:bg-muted/50"
             >
-              <div className="h-10 w-10 overflow-hidden rounded-lg bg-muted">
-                <img
+              <div className="relative h-10 w-10 overflow-hidden rounded-lg bg-muted">
+                <Image
                   src={product.imageUrl1}
                   alt={product.name}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="40px"
+                  loader={passthroughImageLoader}
+                  unoptimized
+                  className="object-cover"
                 />
               </div>
 

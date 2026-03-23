@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, DragEvent } from "react";
+import Image from "next/image";
 
 interface ImageUploadProps {
   label: string;
@@ -9,6 +10,8 @@ interface ImageUploadProps {
   onChange: (url: string | null) => void;
   error?: string;
 }
+
+const passthroughImageLoader = ({ src }: { src: string }) => src;
 
 export default function ImageUpload({ label, value, required, onChange, error }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
@@ -67,10 +70,14 @@ export default function ImageUpload({ label, value, required, onChange, error }:
 
       {value ? (
         <div className="relative inline-block">
-          <img
+          <Image
             src={value}
             alt="Preview"
-            className="h-24 w-24 rounded-lg border border-border object-cover bg-muted"
+            width={96}
+            height={96}
+            loader={passthroughImageLoader}
+            unoptimized
+            className="h-auto w-auto rounded-lg border border-border object-cover bg-muted"
           />
           <button
             type="button"

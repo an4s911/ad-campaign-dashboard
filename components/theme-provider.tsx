@@ -11,47 +11,55 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+function isTheme(value: string | null): value is Theme {
+  return value === "light" || value === "dark" || value === "system";
+}
+
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") return "system";
+
+  const savedTheme = window.localStorage.getItem("theme");
+  return isTheme(savedTheme) ? savedTheme : "system";
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("system");
-  const [mounted, setMounted] = useState(false);
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
-    setMounted(true);
-    const savedTheme = localStorage.getItem("theme") as Theme | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    
     const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
-    
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      root.classList.add(systemTheme);
-      
-      const listener = (e: MediaQueryListEvent) => {
-        if (theme === "system") {
-          root.classList.remove("light", "dark");
-          root.classList.add(e.matches ? "dark" : "light");
-        }
-      };
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      mediaQuery.addEventListener("change", listener);
-      return () => mediaQuery.removeEventListener("change", listener);
-    } else {
-      root.classList.add(theme);
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const applyTheme = (nextTheme: Theme) => {
+      root.classList.remove("light", "dark");
+
+      if (nextTheme === "system") {
+        root.classList.add(mediaQuery.matches ? "dark" : "light");
+        return;
+      }
+
+      root.classList.add(nextTheme);
+    };
+
+    applyTheme(theme);
+
+    if (theme !== "system") {
+      return;
     }
-  }, [theme, mounted]);
+
+    const listener = (event: MediaQueryListEvent) => {
+      root.classList.remove("light", "dark");
+      root.classList.add(event.matches ? "dark" : "light");
+    };
+
+    mediaQuery.addEventListener("change", listener);
+    return () => mediaQuery.removeEventListener("change", listener);
+  }, [theme]);
 
   const value = {
     theme,
     setTheme: (newTheme: Theme) => {
-      localStorage.setItem("theme", newTheme);
-      setTheme(newTheme);
+      window.localStorage.setItem("theme", newTheme);
+      setThemeState(newTheme);
     },
   };
 
