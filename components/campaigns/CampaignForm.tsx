@@ -3,11 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import TogglePills from "@/components/TogglePills";
-import StyleCard from "@/components/StyleCard";
-import StylePreviewModal, { StylePreviewData } from "@/components/StylePreviewModal";
-
-// ---------- Types ----------
+import TogglePills from "@/components/campaigns/TogglePills";
+import StyleCard from "@/components/styles/StyleCard";
+import StylePreviewModal, { StylePreviewData } from "@/components/styles/StylePreviewModal";
 
 interface Product {
   id: string;
@@ -21,7 +19,7 @@ interface Product {
 interface GeneratedImage {
   id: string;
   imageUrl: string;
-  status: string; // pending, completed, failed
+  status: string;
   campaignId: string;
   createdAt: string;
 }
@@ -33,10 +31,8 @@ interface Style {
 }
 
 interface CampaignFormProps {
-  campaignId: string | null; // null = create, string = edit
+  campaignId: string | null;
 }
-
-// ---------- Constants ----------
 
 const STORE_CATEGORIES = [
   "Clothing", "Food", "Electronics", "Grocery", "Pharmacy", "Sports",
@@ -54,49 +50,31 @@ const AUDIENCE_TAGS = [
 const POLL_INTERVAL = 3000;
 const passthroughImageLoader = ({ src }: { src: string }) => src;
 
-// ---------- Component ----------
-
 export default function CampaignForm({ campaignId }: CampaignFormProps) {
   const router = useRouter();
   const isEditing = !!campaignId;
-
-  // Section 1 – Basic Info
   const [name, setName] = useState("");
   const [adCount, setAdCount] = useState(10);
-
-  // Section 2 – Product Selection
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
-
-  // Section 3 – Targeting
   const [storeCategories, setStoreCategories] = useState<string[]>([]);
   const [ageMin, setAgeMin] = useState<string>("");
   const [ageMax, setAgeMax] = useState<string>("");
   const [gender, setGender] = useState<string[]>([]);
   const [audienceTags, setAudienceTags] = useState<string[]>([]);
-
-  // Section 4 – Ideas
   const [ideas, setIdeas] = useState<string[]>([""]);
-
-  // Section 5 – Styles
   const [allStyles, setAllStyles] = useState<Style[]>([]);
   const [selectedStyleIds, setSelectedStyleIds] = useState<string[]>([]);
   const [previewStyle, setPreviewStyle] = useState<StylePreviewData | null>(null);
   const [stylesLoading, setStylesLoading] = useState(true);
-
-  // Section 6 – Generate & Review
   const [savedCampaignId, setSavedCampaignId] = useState<string | null>(campaignId);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activating, setActivating] = useState(false);
-
-  // Validation & Toast
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
-
-  // Polling ref
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function showToast(message: string, type: "error" | "success") {
@@ -104,7 +82,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     setTimeout(() => setToast(null), 3500);
   }
 
-  // ---------- Fetch products ----------
   const fetchProducts = useCallback(async () => {
     try {
       const res = await fetch("/api/products");
@@ -116,7 +93,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     }
   }, []);
 
-  // ---------- Fetch styles ----------
   const fetchStyles = useCallback(async () => {
     try {
       const res = await fetch("/api/styles");
@@ -133,7 +109,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     fetchStyles();
   }, [fetchProducts, fetchStyles]);
 
-  // ---------- Load existing campaign for edit ----------
   useEffect(() => {
     if (!campaignId) return;
     (async () => {
@@ -156,13 +131,9 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
             ? data.ideas.map((i: { description: string }) => i.description)
             : [""]
         );
-
-        // Styles
         setSelectedStyleIds(
           data.styles.map((cs: { styleId: string }) => cs.styleId)
         );
-
-        // Generated images (includes pending ones)
         if (data.generatedImages?.length > 0) {
           setGeneratedImages(data.generatedImages);
         }
@@ -172,7 +143,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     })();
   }, [campaignId]);
 
-  // ---------- Polling for pending images ----------
   const hasPending = generatedImages.some((img) => img.status === "pending");
 
   useEffect(() => {
@@ -194,11 +164,9 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           setGeneratedImages(images);
         }
       } catch {
-        // Silently retry on next interval
       }
     }
 
-    // Poll immediately once, then set interval
     poll();
     pollTimerRef.current = setInterval(poll, POLL_INTERVAL);
 
@@ -210,7 +178,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     };
   }, [hasPending, savedCampaignId]);
 
-  // ---------- Validation ----------
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = "Campaign name is required";
@@ -222,74 +189,102 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     return Object.keys(errs).length === 0;
   }
 
-  // ---------- Build styles array ----------
+  function buildIdeas(): string[] {
+    return ideas.map((i) => i.trim()).filter(Boolean);
+  }
+
   function buildStyles(): string[] {
     return selectedStyleIds;
   }
 
-  // ---------- Save campaign (create or update) ----------
-  async function saveCampaign(): Promise<string | null> {
-    if (!validate()) return null;
+  async function saveCampaign(status: "draft" | "active" = "draft") {
+    if (!validate()) return;
+
     setSaving(true);
     try {
-      const body = {
+      const payload = {
         name: name.trim(),
         adCount,
         targetStoreCategories: storeCategories,
-        targetAgeMin: ageMin ? parseInt(ageMin) : null,
-        targetAgeMax: ageMax ? parseInt(ageMax) : null,
+        targetAgeMin: ageMin ? Number(ageMin) : null,
+        targetAgeMax: ageMax ? Number(ageMax) : null,
         targetGender: gender,
         targetTags: audienceTags,
         productIds: selectedProductIds,
-        ideas: ideas.filter((i) => i.trim()),
+        ideas: buildIdeas(),
         styles: buildStyles(),
+        ...(status === "active" && { status: "active" }),
       };
 
-      const url = savedCampaignId
-        ? `/api/campaigns/${savedCampaignId}`
-        : "/api/campaigns";
-      const method = savedCampaignId ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
+      const res = await fetch(savedCampaignId ? `/api/campaigns/${savedCampaignId}` : "/api/campaigns", {
+        method: savedCampaignId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
 
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
-        const id = data.id;
-        if (!savedCampaignId) setSavedCampaignId(id);
+        if (!savedCampaignId) setSavedCampaignId(data.id);
         showToast(savedCampaignId ? "Campaign updated" : "Campaign saved as draft", "success");
-        return id;
+        if (status === "active") router.push("/campaign");
       } else {
-        const data = await res.json();
         showToast(data.error || "Failed to save", "error");
-        return null;
       }
     } catch {
       showToast("Failed to save campaign", "error");
-      return null;
     } finally {
       setSaving(false);
     }
   }
 
-  // ---------- Generate images (async – returns immediately) ----------
   async function handleGenerate() {
-    // Always save latest form state before generating
-    const cid = await saveCampaign();
-    if (!cid) return;
+    if (!validate()) return;
+
+    let targetId = savedCampaignId;
+    if (!targetId) {
+      setSaving(true);
+      try {
+        const res = await fetch("/api/campaigns", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name.trim(),
+            adCount,
+            targetStoreCategories: storeCategories,
+            targetAgeMin: ageMin ? Number(ageMin) : null,
+            targetAgeMax: ageMax ? Number(ageMax) : null,
+            targetGender: gender,
+            targetTags: audienceTags,
+            productIds: selectedProductIds,
+            ideas: buildIdeas(),
+            styles: buildStyles(),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.error || "Failed to save before generation", "error");
+          return;
+        }
+        targetId = data.id;
+        setSavedCampaignId(targetId);
+      } catch {
+        showToast("Failed to save before generation", "error");
+        return;
+      } finally {
+        setSaving(false);
+      }
+    }
+
+    if (!targetId) return;
+
     setGenerating(true);
     try {
-      const res = await fetch(`/api/campaigns/${cid}/generate`, { method: "POST" });
+      const res = await fetch(`/api/campaigns/${targetId}/generate`, { method: "POST" });
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
-        // Append pending image records – polling will update them as they complete
         setGeneratedImages((prev) => [...prev, ...data.images]);
         showToast(`Generating ${data.images.length} images...`, "success");
       } else {
-        const data = await res.json();
         showToast(data.error || "Generation failed", "error");
       }
     } catch {
@@ -299,13 +294,11 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     }
   }
 
-  // ---------- Delete generated image ----------
   async function handleDeleteImage(imageId: string) {
-    const cid = savedCampaignId;
-    if (!cid) return;
+    if (!savedCampaignId) return;
     setGeneratedImages((prev) => prev.filter((img) => img.id !== imageId));
     try {
-      const res = await fetch(`/api/campaigns/${cid}/images`, {
+      const res = await fetch(`/api/campaigns/${savedCampaignId}/images`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageId }),
@@ -316,29 +309,12 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     }
   }
 
-  // ---------- Activate campaign ----------
   async function handleActivate() {
-    let cid = savedCampaignId;
-    if (!cid) {
-      cid = await saveCampaign();
-      if (!cid) return;
-    } else {
-      const saved = await saveCampaign();
-      if (!saved) return;
-    }
+    if (!validate()) return;
     setActivating(true);
     try {
-      const res = await fetch(`/api/campaigns/${cid}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "active" }),
-      });
-      if (res.ok) {
-        showToast("Campaign activated!", "success");
-        setTimeout((() => router.push("/campaign")), 600);
-      } else {
-        showToast("Failed to activate campaign", "error");
-      }
+      await saveCampaign("active");
+      showToast("Campaign activated!", "success");
     } catch {
       showToast("Failed to activate campaign", "error");
     } finally {
@@ -346,19 +322,19 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     }
   }
 
-  // ---------- Ideas helpers ----------
   function updateIdea(index: number, value: string) {
     setIdeas((prev) => prev.map((v, i) => (i === index ? value : v)));
   }
+
   function removeIdea(index: number) {
     if (ideas.length <= 1) return;
     setIdeas((prev) => prev.filter((_, i) => i !== index));
   }
+
   function addIdea() {
     setIdeas((prev) => [...prev, ""]);
   }
 
-  // ---------- Product toggle ----------
   function toggleProduct(id: string) {
     setSelectedProductIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -366,15 +342,12 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     if (errors.products) setErrors((e) => ({ ...e, products: "" }));
   }
 
-  // ---------- Computed ----------
   const completedImages = generatedImages.filter((img) => img.status === "completed");
   const pendingImages = generatedImages.filter((img) => img.status === "pending");
   const failedImages = generatedImages.filter((img) => img.status === "failed");
 
-  // ---------- Render ----------
   return (
     <div className="mx-auto max-w-4xl">
-      {/* Toast */}
       {toast && (
         <div
           className={`fixed right-6 top-6 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
@@ -385,10 +358,9 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         </div>
       )}
 
-      {/* Header */}
       <div className="mb-8 flex items-center gap-4">
         <button
-          onClick={(() => router.push("/campaign"))}
+          onClick={() => router.push("/campaign")}
           className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -401,8 +373,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       </div>
 
       <div className="space-y-8">
-        {/* ============ Section 1 – Basic Info ============ */}
-        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+        <section className="rounded-xl border border-border bg-card p-6 text-card-foreground">
           <h2 className="mb-4 text-base font-semibold text-foreground">Basic Info</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -441,8 +412,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           </div>
         </section>
 
-        {/* ============ Section 2 – Product Selection ============ */}
-        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+        <section className="rounded-xl border border-border bg-card p-6 text-card-foreground">
           <h2 className="mb-1 text-base font-semibold text-foreground">Select Products <span className="text-error">*</span></h2>
           <p className="mb-4 text-sm text-muted-foreground">Choose the products to feature in this campaign.</p>
           {errors.products && <p className="mb-3 text-xs text-error">{errors.products}</p>}
@@ -505,8 +475,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           )}
         </section>
 
-        {/* ============ Section 3 – Targeting ============ */}
-        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+        <section className="rounded-xl border border-border bg-card p-6 text-card-foreground">
           <h2 className="mb-4 text-base font-semibold text-foreground">Targeting</h2>
 
           <div className="space-y-5">
@@ -525,7 +494,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   placeholder="Min"
                   value={ageMin}
                   onChange={(e) => setAgeMin(e.target.value)}
-                  className="w-24 rounded-lg border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-24 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <span className="text-muted-foreground">—</span>
                 <input
@@ -535,7 +504,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   placeholder="Max"
                   value={ageMax}
                   onChange={(e) => setAgeMax(e.target.value)}
-                  className="w-24 rounded-lg border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-24 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
@@ -552,8 +521,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           </div>
         </section>
 
-        {/* ============ Section 4 – Campaign Ideas ============ */}
-        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+        <section className="rounded-xl border border-border bg-card p-6 text-card-foreground">
           <h2 className="mb-1 text-base font-semibold text-foreground">Campaign Ideas</h2>
           <p className="mb-4 text-sm text-muted-foreground">Describe your vision for the ad images.</p>
           {errors.ideas && <p className="mb-3 text-xs text-error">{errors.ideas}</p>}
@@ -569,7 +537,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   }}
                   placeholder={`Idea ${index + 1}: Describe an ad concept...`}
                   rows={2}
-                  className="flex-1 resize-none rounded-lg border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 {ideas.length > 1 && (
                   <button
@@ -598,8 +566,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           </button>
         </section>
 
-        {/* ============ Section 5 – Style Selection ============ */}
-        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+        <section className="rounded-xl border border-border bg-card p-6 text-card-foreground">
           <h2 className="mb-1 text-base font-semibold text-foreground">
             Style Selection <span className="text-error">*</span>
           </h2>
@@ -643,16 +610,14 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           )}
         </section>
 
-        {/* ============ Section 6 – Generate & Review ============ */}
-        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+        <section className="rounded-xl border border-border bg-card p-6 text-card-foreground">
           <h2 className="mb-4 text-base font-semibold text-foreground">Generate & Review</h2>
 
-          {/* Generate button */}
           <button
             type="button"
             onClick={handleGenerate}
             disabled={generating || saving}
-            className="flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium  transition-colors hover:opacity-90 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
           >
             {generating ? (
               <>
@@ -672,7 +637,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
             )}
           </button>
 
-          {/* Progress indicator when generating */}
           {pendingImages.length > 0 && (
             <div className="mt-4 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/10 px-4 py-3">
               <svg className="h-5 w-5 shrink-0 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
@@ -686,7 +650,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
             </div>
           )}
 
-          {/* Image grid */}
           {generatedImages.length > 0 && (
             <div className="mt-6">
               <p className="mb-3 text-sm font-medium text-card-foreground">
@@ -710,7 +673,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                         <button
                           type="button"
                           onClick={() => handleDeleteImage(img.id)}
-                          className="absolute right-2 top-2 rounded-md bg-black/60 p-1  opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
+                          className="absolute right-2 top-2 rounded-md bg-black/60 p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -733,21 +696,21 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                           <svg className="h-6 w-6 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                           </svg>
-                          <span className="text-xs text-error">Failed</span>
+                          <span className="text-xs text-muted-foreground">Failed</span>
                         </div>
                       </div>
                     )}
+                    <div className="relative aspect-square" />
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Action buttons */}
           <div className="mt-6 flex items-center gap-3 border-t border-border/50 pt-6">
             <button
               type="button"
-              onClick={(() => router.push("/campaign"))}
+              onClick={() => router.push("/campaign")}
               className="rounded-lg border border-input px-4 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
             >
               Cancel
@@ -764,7 +727,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
               type="button"
               onClick={handleActivate}
               disabled={activating || saving}
-              className="rounded-lg bg-success text-success-foreground px-5 py-2 text-sm font-medium  transition-colors hover:opacity-90 disabled:opacity-50"
+              className="rounded-lg bg-success px-5 py-2 text-sm font-medium text-success-foreground transition-colors hover:opacity-90 disabled:opacity-50"
             >
               {activating ? "Activating..." : isEditing ? "Update & Activate" : "Create Campaign"}
             </button>

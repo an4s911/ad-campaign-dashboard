@@ -3,7 +3,7 @@
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { StylePreviewData } from "@/components/StylePreviewModal";
+import { StylePreviewData } from "@/components/styles/StylePreviewModal";
 
 interface StyleCardProps {
   style: StylePreviewData;

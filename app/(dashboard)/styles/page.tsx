@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import StyleCard from "@/components/StyleCard";
-import StylePreviewModal, { StylePreviewData } from "@/components/StylePreviewModal";
+import StyleCard from "@/components/styles/StyleCard";
+import StylePreviewModal, { StylePreviewData } from "@/components/styles/StylePreviewModal";
 
 export default function StylesPage() {
   const [styles, setStyles] = useState<StylePreviewData[]>([]);

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import SetupForm from "./setup-form";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export default async function SetupPage() {
   const userCount = await prisma.user.count();

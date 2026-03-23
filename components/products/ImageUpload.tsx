@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, DragEvent } from "react";
+import { useRef, useState, DragEvent } from "react";
 import Image from "next/image";
 
 interface ImageUploadProps {

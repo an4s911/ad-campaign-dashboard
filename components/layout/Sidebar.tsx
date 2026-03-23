@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
-import { ThemeToggle } from "./theme-toggle";
+import { usePathname, useRouter } from "next/navigation";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 function getNavItems(role: string) {
   const items: { href: string; label: string; icon: React.ReactNode }[] = [
@@ -85,8 +84,7 @@ export default function Sidebar({
   }
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col bg-card border-r border-border">
-      {/* Logo */}
+    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-border bg-card">
       <div className="px-6 py-6">
         <h1 className="text-xl font-bold uppercase tracking-wider">
           <span className="bg-linear-to-r from-primary to-cyan-400 bg-clip-text text-transparent">
@@ -98,7 +96,6 @@ export default function Sidebar({
         </p>
       </div>
 
-      {/* Nav */}
       <nav className="mt-2 flex-1 px-3">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -124,7 +121,6 @@ export default function Sidebar({
         })}
       </nav>
 
-      {/* User + Logout */}
       <div className="border-t border-border px-3 py-4">
         <div className="mb-4 flex items-center justify-between px-3">
           <p className="max-w-32 truncate text-sm font-medium text-foreground">{userName}</p>

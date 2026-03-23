@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession, isUsingBootstrapPassword } from "@/lib/auth";
-import Sidebar from "@/components/Sidebar";
+import Sidebar from "@/components/layout/Sidebar";
 
 export default async function DashboardLayout({
   children,

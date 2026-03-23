@@ -2,7 +2,7 @@
 
 import { useState, useEffect, FormEvent, use } from "react";
 import { useRouter } from "next/navigation";
-import ImageUpload from "@/components/ImageUpload";
+import ImageUpload from "@/components/products/ImageUpload";
 
 interface Product {
   id: string;

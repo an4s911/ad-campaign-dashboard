@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import ImageUpload from "@/components/ImageUpload";
+import ImageUpload from "@/components/products/ImageUpload";
 
 export default function NewProductPage() {
   const router = useRouter();
