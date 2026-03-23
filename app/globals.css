@@ -67,3 +67,44 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.markdown-prose {
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: var(--muted-foreground);
+  --tw-prose-links: var(--primary);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-bullets: var(--border);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-captions: var(--muted-foreground);
+  --tw-prose-kbd: var(--foreground);
+  --tw-prose-kbd-shadows: 15 23 42;
+  --tw-prose-code: var(--foreground);
+  --tw-prose-pre-code: #e2e8f0;
+  --tw-prose-pre-bg: #0f172a;
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
+}
+
+.dark .markdown-prose {
+  --tw-prose-body: #e2e8f0;
+  --tw-prose-headings: #f8fafc;
+  --tw-prose-lead: #94a3b8;
+  --tw-prose-links: #818cf8;
+  --tw-prose-bold: #f8fafc;
+  --tw-prose-counters: #94a3b8;
+  --tw-prose-bullets: #475569;
+  --tw-prose-hr: #334155;
+  --tw-prose-quotes: #e2e8f0;
+  --tw-prose-quote-borders: #475569;
+  --tw-prose-captions: #94a3b8;
+  --tw-prose-kbd: #f8fafc;
+  --tw-prose-code: #f8fafc;
+  --tw-prose-pre-code: #e2e8f0;
+  --tw-prose-pre-bg: #020617;
+  --tw-prose-th-borders: #475569;
+  --tw-prose-td-borders: #334155;
+}

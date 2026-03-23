@@ -2,32 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const includeDisabled =
-      request.nextUrl.searchParams.get("includeDisabled") === "true" &&
-      session.role === "superuser";
-
-    const styles = await prisma.style.findMany({
-      where: includeDisabled ? undefined : { isEnabled: true },
-      orderBy: { name: "asc" },
-    });
-    return NextResponse.json(styles);
-  } catch (error) {
-    console.error("Failed to fetch styles:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch styles" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getSession();
     if (!session) {
@@ -37,6 +15,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    const { id } = await params;
+    const style = await prisma.style.findUnique({
+      where: { id },
+    });
+
+    if (!style) {
+      return NextResponse.json({ error: "Style not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(style);
+  } catch (error) {
+    console.error("Failed to fetch style:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch style" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (session.role !== "superuser") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const { id } = await params;
     const body = await request.json();
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
@@ -48,26 +59,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await prisma.style.findUnique({ where: { name } });
-    if (existing) {
+    const existing = await prisma.style.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Style not found" }, { status: 404 });
+    }
+
+    const nameConflict = await prisma.style.findFirst({
+      where: {
+        name,
+        NOT: { id },
+      },
+    });
+    if (nameConflict) {
       return NextResponse.json(
         { error: "A style with this name already exists" },
         { status: 409 }
       );
     }
 
-    const style = await prisma.style.create({
+    const style = await prisma.style.update({
+      where: { id },
       data: {
         name,
         prompt,
       },
     });
 
-    return NextResponse.json(style, { status: 201 });
+    return NextResponse.json(style);
   } catch (error) {
-    console.error("Failed to create style:", error);
+    console.error("Failed to update style:", error);
     return NextResponse.json(
-      { error: "Failed to create style" },
+      { error: "Failed to update style" },
       { status: 500 }
     );
   }

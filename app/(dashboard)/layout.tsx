@@ -17,6 +17,7 @@ export default async function DashboardLayout({
       <Sidebar
         userName={session.fullName}
         usingDefaultPassword={usingDefaultPassword}
+        userRole={session.role}
       />
       <main className="flex-1 overflow-y-auto p-8">
         {usingDefaultPassword && (
