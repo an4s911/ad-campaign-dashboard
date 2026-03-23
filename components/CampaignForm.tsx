@@ -3,10 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { createPortal } from "react-dom";
 import TogglePills from "@/components/TogglePills";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import StyleCard from "@/components/StyleCard";
+import StylePreviewModal, { StylePreviewData } from "@/components/StylePreviewModal";
 
 // ---------- Types ----------
 
@@ -83,7 +82,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   // Section 5 – Styles
   const [allStyles, setAllStyles] = useState<Style[]>([]);
   const [selectedStyleIds, setSelectedStyleIds] = useState<string[]>([]);
-  const [previewStyle, setPreviewStyle] = useState<Style | null>(null);
+  const [previewStyle, setPreviewStyle] = useState<StylePreviewData | null>(null);
   const [stylesLoading, setStylesLoading] = useState(true);
 
   // Section 6 – Generate & Review
@@ -172,19 +171,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       }
     })();
   }, [campaignId]);
-
-  useEffect(() => {
-    if (!previewStyle) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setPreviewStyle(null);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [previewStyle]);
 
   // ---------- Polling for pending images ----------
   const hasPending = generatedImages.some((img) => img.status === "pending");
@@ -384,50 +370,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   const completedImages = generatedImages.filter((img) => img.status === "completed");
   const pendingImages = generatedImages.filter((img) => img.status === "pending");
   const failedImages = generatedImages.filter((img) => img.status === "failed");
-  const previewModal =
-    previewStyle && typeof document !== "undefined"
-      ? createPortal(
-          <div
-            className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 p-4"
-            onClick={() => setPreviewStyle(null)}
-          >
-            <div
-              className="flex h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="flex items-center justify-between border-b border-border px-6 py-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-card-foreground">
-                    {previewStyle.name}
-                  </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Full markdown preview
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPreviewStyle(null)}
-                  className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                  aria-label="Close preview"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto px-6 py-5">
-                <div className="markdown-prose prose prose-sm min-h-full max-w-none rounded-xl border border-border bg-muted p-5">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {previewStyle.prompt}
-                  </ReactMarkdown>
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )
-      : null;
 
   // ---------- Render ----------
   return (
@@ -679,67 +621,22 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
               {allStyles.map((style) => {
                 const isSelected = selectedStyleIds.includes(style.id);
                 return (
-                  <div
+                  <StyleCard
                     key={style.id}
-                    className={`flex h-80 flex-col overflow-hidden rounded-lg border-2 transition-all ${
-                      isSelected
-                        ? "border-primary bg-primary/10 ring-1 ring-primary/20"
-                        : "border-border bg-card text-card-foreground hover:border-primary/30"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedStyleIds((prev) =>
-                          prev.includes(style.id)
-                            ? prev.filter((x) => x !== style.id)
-                            : [...prev, style.id]
-                        );
-                        if (errors.styles) setErrors((e) => ({ ...e, styles: "" }));
-                      }}
-                      className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-4 text-left"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground">{style.name}</p>
-                      </div>
-                      <div
-                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
-                          isSelected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-input bg-background"
-                        }`}
-                        aria-hidden="true"
-                      >
-                        {isSelected && (
-                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                          </svg>
-                        )}
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPreviewStyle(style)}
-                      className="group relative flex-1 overflow-hidden bg-muted/40 text-left"
-                      aria-label={`Preview ${style.name}`}
-                    >
-                      <div className="absolute inset-0 overflow-hidden px-4 py-4">
-                        <div className="markdown-prose prose prose-sm pointer-events-none max-w-none transition duration-200 group-hover:scale-[1.01] group-hover:blur-[3px] [&_h1]:mb-3 [&_h1]:text-sm [&_h2]:mb-2 [&_h2]:mt-3 [&_h2]:text-xs [&_li]:my-0 [&_li]:text-xs [&_ol]:my-2 [&_p]:my-2 [&_p]:text-xs [&_pre]:rounded-lg [&_pre]:p-3 [&_strong]:text-current">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {style.prompt}
-                          </ReactMarkdown>
-                        </div>
-                      </div>
-                      <div className="pointer-events-none absolute inset-0 bg-background/0 transition-colors duration-200 group-hover:bg-background/45 dark:group-hover:bg-background/30" />
-                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
-                        <span className="rounded-full border border-border/80 bg-card/95 px-3 py-1.5 text-xs font-semibold text-foreground shadow-lg shadow-black/10 backdrop-blur-md dark:border-border dark:bg-card/90 dark:shadow-black/30">
-                          Preview full style guide
-                        </span>
-                      </div>
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-card via-card/95 to-transparent" />
-                    </button>
-                  </div>
+                    style={style}
+                    selected={isSelected}
+                    onSelect={() => {
+                      setSelectedStyleIds((prev) =>
+                        prev.includes(style.id)
+                          ? prev.filter((x) => x !== style.id)
+                          : [...prev, style.id]
+                      );
+                      if (errors.styles) setErrors((e) => ({ ...e, styles: "" }));
+                    }}
+                    onPreview={() => setPreviewStyle(style)}
+                    previewTrigger="preview-pane"
+                    showCheckbox
+                  />
                 );
               })}
             </div>
@@ -874,7 +771,10 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           </div>
         </section>
       </div>
-      {previewModal}
+      <StylePreviewModal
+        style={previewStyle}
+        onClose={() => setPreviewStyle(null)}
+      />
     </div>
   );
 }
