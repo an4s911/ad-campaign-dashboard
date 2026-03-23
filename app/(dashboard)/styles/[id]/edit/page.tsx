@@ -107,8 +107,8 @@ export default function EditStylePage({
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 h-8 w-40 animate-pulse rounded bg-muted" />
         <div className="grid gap-5 xl:grid-cols-2">
-          <div className="min-h-[680px] animate-pulse rounded-2xl border border-border bg-card" />
-          <div className="min-h-[680px] animate-pulse rounded-2xl border border-border bg-card" />
+          <div className="min-h-170 animate-pulse rounded-2xl border border-border bg-card" />
+          <div className="min-h-170 animate-pulse rounded-2xl border border-border bg-card" />
         </div>
       </div>
     );
@@ -162,7 +162,7 @@ export default function EditStylePage({
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               placeholder="# Style name&#10;&#10;## Visual Direction&#10;- ..."
-              className="min-h-[560px] w-full resize-y rounded-xl border border-input bg-background px-4 py-3 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="min-h-140 w-full resize-y rounded-xl border border-input bg-background px-4 py-3 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -185,7 +185,7 @@ export default function EditStylePage({
           </div>
 
           {showPreview ? (
-            <div className="markdown-prose prose prose-sm min-h-[560px] max-w-none overflow-y-auto rounded-xl border border-border bg-muted p-5">
+            <div className="markdown-prose prose prose-sm min-h-140 max-w-none overflow-y-auto rounded-xl border border-border bg-muted p-5">
               {prompt.trim() ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {prompt}
@@ -197,7 +197,7 @@ export default function EditStylePage({
               )}
             </div>
           ) : (
-            <div className="flex min-h-[560px] items-center justify-center rounded-xl border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+            <div className="flex min-h-140 items-center justify-center rounded-xl border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
               Click <span className="mx-1 font-medium text-foreground">Preview Markdown</span> to render the style guide without saving.
             </div>
           )}
