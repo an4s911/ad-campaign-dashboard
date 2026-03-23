@@ -90,10 +90,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     return (
       <div className="mx-auto max-w-lg">
         <div className="mb-8 flex items-center gap-4">
-          <div className="h-5 w-5 animate-pulse rounded bg-gray-200" />
-          <div className="h-8 w-40 animate-pulse rounded bg-gray-200" />
+          <div className="h-5 w-5 animate-pulse rounded bg-muted" />
+          <div className="h-8 w-40 animate-pulse rounded bg-muted" />
         </div>
-        <div className="h-96 animate-pulse rounded-xl bg-gray-200" />
+        <div className="h-96 animate-pulse rounded-xl bg-muted" />
       </div>
     );
   }
@@ -103,20 +103,20 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       <div className="mb-8 flex items-center gap-4">
         <button
           onClick={() => router.push("/product")}
-          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
+          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">Edit Product</h1>
+        <h1 className="text-2xl font-bold text-foreground">Edit Product</h1>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
+      <div className="rounded-xl border border-border bg-card p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Name <span className="text-red-400">*</span>
+            <label className="mb-1.5 block text-sm font-medium text-card-foreground">
+              Name <span className="text-error">*</span>
             </label>
             <input
               type="text"
@@ -126,16 +126,16 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
                 if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
               }}
               placeholder="Product name"
-              className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.name ? "border-red-300 bg-red-50/50" : "border-gray-300"
+              className={`w-full rounded-lg border bg-background text-foreground px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
+                errors.name ? "border-error/50 bg-error/10" : "border-input"
               }`}
             />
-            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+            {errors.name && <p className="mt-1 text-xs text-error">{errors.name}</p>}
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Description <span className="text-red-400">*</span>
+            <label className="mb-1.5 block text-sm font-medium text-card-foreground">
+              Description <span className="text-error">*</span>
             </label>
             <textarea
               value={description}
@@ -145,11 +145,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               }}
               placeholder="Product description"
               rows={3}
-              className={`w-full resize-none rounded-lg border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.description ? "border-red-300 bg-red-50/50" : "border-gray-300"
+              className={`w-full resize-none rounded-lg border bg-background text-foreground px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
+                errors.description ? "border-error/50 bg-error/10" : "border-input"
               }`}
             />
-            {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description}</p>}
+            {errors.description && <p className="mt-1 text-xs text-error">{errors.description}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -174,14 +174,14 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             <button
               type="button"
               onClick={() => router.push("/product")}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
             >
               {submitting ? "Saving..." : "Update Product"}
             </button>

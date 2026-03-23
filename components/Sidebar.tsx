@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "./theme-toggle";
 
 const navItems: { href: string; label: string; icon: React.ReactNode }[] = [
   {
@@ -64,15 +65,15 @@ export default function Sidebar({
   }
 
   return (
-    <aside className="flex h-screen w-[260px] shrink-0 flex-col" style={{ backgroundColor: "#0a0f1a" }}>
+    <aside className="flex h-screen w-64 shrink-0 flex-col bg-card border-r border-border">
       {/* Logo */}
       <div className="px-6 py-6">
         <h1 className="text-xl font-bold uppercase tracking-wider">
-          <span className="bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+          <span className="bg-linear-to-r from-primary to-cyan-400 bg-clip-text text-transparent">
             Bonmedia
           </span>
         </h1>
-        <p className="mt-1 text-[11px] uppercase tracking-widest text-gray-500">
+        <p className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">
           Ad Dashboard
         </p>
       </div>
@@ -87,16 +88,16 @@ export default function Sidebar({
               href={item.href}
               className={`group mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                 isActive
-                  ? "border-l-[3px] border-blue-400 bg-white/10 pl-[9px] text-white"
-                  : "border-l-[3px] border-transparent pl-[9px] text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                  ? "border-l-[3px] border-primary bg-primary/10 pl-2.25 text-primary"
+                  : "border-l-[3px] border-transparent pl-2.25 text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
-              <span className={isActive ? "text-blue-400" : "text-gray-500 group-hover:text-gray-300"}>
+              <span className={isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}>
                 {item.icon}
               </span>
               {item.label}
               {item.href === "/settings" && usingDefaultPassword && (
-                <span className="ml-auto h-2 w-2 rounded-full bg-amber-400" />
+                <span className="ml-auto h-2 w-2 rounded-full bg-warning" />
               )}
             </Link>
           );
@@ -104,13 +105,14 @@ export default function Sidebar({
       </nav>
 
       {/* User + Logout */}
-      <div className="border-t border-white/10 px-3 py-4">
-        <div className="mb-2 px-3">
-          <p className="text-sm font-medium text-gray-300 truncate">{userName}</p>
+      <div className="border-t border-border px-3 py-4">
+        <div className="mb-4 flex items-center justify-between px-3">
+          <p className="max-w-32 truncate text-sm font-medium text-foreground">{userName}</p>
+          <ThemeToggle />
         </div>
         <button
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-200"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-error/10 hover:text-error"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />

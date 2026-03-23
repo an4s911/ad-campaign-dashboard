@@ -52,15 +52,15 @@ export default function LoginForm({ from }: { from?: string }) {
 
   if (defaultPwWarning) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-        <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-4 py-3 rounded-lg text-sm">
+      <div className="bg-card text-card-foreground rounded-lg shadow-lg border border-border p-6">
+        <div className="bg-warning/10 border border-warning/20 text-warning px-4 py-3 rounded-lg text-sm">
           <p className="font-medium">Default password detected</p>
           <p className="mt-1">
             You are using the default admin password. Please change it in
             Settings after logging in.
           </p>
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 text-center">
+        <p className="text-sm text-muted-foreground mt-3 text-center">
           Redirecting...
         </p>
       </div>
@@ -70,10 +70,10 @@ export default function LoginForm({ from }: { from?: string }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 space-y-4"
+      className="bg-card text-card-foreground rounded-lg shadow-lg border border-border p-6 space-y-4"
     >
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-error/10 border border-error/20 text-error px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}

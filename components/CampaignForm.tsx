@@ -376,7 +376,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       {toast && (
         <div
           className={`fixed right-6 top-6 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
-            toast.type === "error" ? "bg-red-500 text-white" : "bg-emerald-500 text-white"
+            toast.type === "error" ? "bg-error text-error-foreground " : "bg-success text-success-foreground "
           }`}
         >
           {toast.message}
@@ -387,25 +387,25 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       <div className="mb-8 flex items-center gap-4">
         <button
           onClick={(() => router.push("/campaign"))}
-          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
+          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-foreground">
           {isEditing ? "Edit Campaign" : "New Campaign"}
         </h1>
       </div>
 
       <div className="space-y-8">
         {/* ============ Section 1 – Basic Info ============ */}
-        <section className="rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="mb-4 text-base font-semibold text-gray-900">Basic Info</h2>
+        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+          <h2 className="mb-4 text-base font-semibold text-foreground">Basic Info</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Campaign Name <span className="text-red-400">*</span>
+              <label className="mb-1.5 block text-sm font-medium text-card-foreground">
+                Campaign Name <span className="text-error">*</span>
               </label>
               <input
                 type="text"
@@ -415,44 +415,44 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   if (errors.name) setErrors((p) => ({ ...p, name: "" }));
                 }}
                 placeholder="e.g. Summer Sale 2026"
-                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.name ? "border-red-300" : "border-gray-300"
+                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                  errors.name ? "border-error/50" : "border-input"
                 }`}
               />
-              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+              {errors.name && <p className="mt-1 text-xs text-error">{errors.name}</p>}
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Number of Ads <span className="text-red-400">*</span>
+              <label className="mb-1.5 block text-sm font-medium text-card-foreground">
+                Number of Ads <span className="text-error">*</span>
               </label>
               <input
                 type="number"
                 min={1}
                 value={adCount}
                 onChange={(e) => setAdCount(parseInt(e.target.value) || 1)}
-                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.adCount ? "border-red-300" : "border-gray-300"
+                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                  errors.adCount ? "border-error/50" : "border-input"
                 }`}
               />
-              {errors.adCount && <p className="mt-1 text-xs text-red-500">{errors.adCount}</p>}
+              {errors.adCount && <p className="mt-1 text-xs text-error">{errors.adCount}</p>}
             </div>
           </div>
         </section>
 
         {/* ============ Section 2 – Product Selection ============ */}
-        <section className="rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="mb-1 text-base font-semibold text-gray-900">Select Products <span className="text-red-400">*</span></h2>
-          <p className="mb-4 text-sm text-gray-400">Choose the products to feature in this campaign.</p>
-          {errors.products && <p className="mb-3 text-xs text-red-500">{errors.products}</p>}
+        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+          <h2 className="mb-1 text-base font-semibold text-foreground">Select Products <span className="text-error">*</span></h2>
+          <p className="mb-4 text-sm text-muted-foreground">Choose the products to feature in this campaign.</p>
+          {errors.products && <p className="mb-3 text-xs text-error">{errors.products}</p>}
 
           {productsLoading ? (
             <div className="grid grid-cols-3 gap-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-28 animate-pulse rounded-lg bg-gray-100" />
+                <div key={i} className="h-28 animate-pulse rounded-lg bg-muted" />
               ))}
             </div>
           ) : allProducts.length === 0 ? (
-            <p className="text-sm text-gray-400">No products available. Add products first.</p>
+            <p className="text-sm text-muted-foreground">No products available. Add products first.</p>
           ) : (
             <div className="grid grid-cols-3 gap-3">
               {allProducts
@@ -466,24 +466,24 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                       onClick={() => toggleProduct(product.id)}
                       className={`flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all ${
                         isSelected
-                          ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500/20"
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/20"
+                          : "border-border bg-card text-card-foreground hover:border-border"
                       }`}
                     >
-                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
                         <img src={product.imageUrl1} alt={product.name} className="h-full w-full object-cover" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-gray-900">{product.name}</p>
-                        <p className="truncate text-xs text-gray-400">{product.description.slice(0, 40)}</p>
+                        <p className="truncate text-sm font-medium text-foreground">{product.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{product.description.slice(0, 40)}</p>
                       </div>
                       <div
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
-                          isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                          isSelected ? "border-primary bg-primary text-primary-foreground" : "border-input"
                         }`}
                       >
                         {isSelected && (
-                          <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <svg className="h-3 w-3 " fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                           </svg>
                         )}
@@ -496,17 +496,17 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         </section>
 
         {/* ============ Section 3 – Targeting ============ */}
-        <section className="rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="mb-4 text-base font-semibold text-gray-900">Targeting</h2>
+        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+          <h2 className="mb-4 text-base font-semibold text-foreground">Targeting</h2>
 
           <div className="space-y-5">
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Store Categories</label>
+              <label className="mb-2 block text-sm font-medium text-card-foreground">Store Categories</label>
               <TogglePills options={STORE_CATEGORIES} selected={storeCategories} onChange={setStoreCategories} />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Age Range</label>
+              <label className="mb-2 block text-sm font-medium text-card-foreground">Age Range</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -515,9 +515,9 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   placeholder="Min"
                   value={ageMin}
                   onChange={(e) => setAgeMin(e.target.value)}
-                  className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-24 rounded-lg border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
-                <span className="text-gray-400">—</span>
+                <span className="text-muted-foreground">—</span>
                 <input
                   type="number"
                   min={0}
@@ -525,28 +525,28 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   placeholder="Max"
                   value={ageMax}
                   onChange={(e) => setAgeMax(e.target.value)}
-                  className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-24 rounded-lg border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Gender</label>
+              <label className="mb-2 block text-sm font-medium text-card-foreground">Gender</label>
               <TogglePills options={GENDER_OPTIONS} selected={gender} onChange={setGender} />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Audience Tags</label>
+              <label className="mb-2 block text-sm font-medium text-card-foreground">Audience Tags</label>
               <TogglePills options={AUDIENCE_TAGS} selected={audienceTags} onChange={setAudienceTags} />
             </div>
           </div>
         </section>
 
         {/* ============ Section 4 – Campaign Ideas ============ */}
-        <section className="rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="mb-1 text-base font-semibold text-gray-900">Campaign Ideas</h2>
-          <p className="mb-4 text-sm text-gray-400">Describe your vision for the ad images.</p>
-          {errors.ideas && <p className="mb-3 text-xs text-red-500">{errors.ideas}</p>}
+        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+          <h2 className="mb-1 text-base font-semibold text-foreground">Campaign Ideas</h2>
+          <p className="mb-4 text-sm text-muted-foreground">Describe your vision for the ad images.</p>
+          {errors.ideas && <p className="mb-3 text-xs text-error">{errors.ideas}</p>}
 
           <div className="space-y-3">
             {ideas.map((idea, index) => (
@@ -559,13 +559,13 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   }}
                   placeholder={`Idea ${index + 1}: Describe an ad concept...`}
                   rows={2}
-                  className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 resize-none rounded-lg border border-input bg-background text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 {ideas.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeIdea(index)}
-                    className="mt-1 self-start rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                    className="mt-1 self-start rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-error/10 hover:text-error"
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -579,7 +579,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           <button
             type="button"
             onClick={addIdea}
-            className="mt-3 flex items-center gap-1.5 text-sm font-medium text-blue-500 transition-colors hover:text-blue-600"
+            className="mt-3 flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:opacity-90"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -589,23 +589,23 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         </section>
 
         {/* ============ Section 5 – Style Selection ============ */}
-        <section className="rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="mb-1 text-base font-semibold text-gray-900">
-            Style Selection <span className="text-red-400">*</span>
+        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+          <h2 className="mb-1 text-base font-semibold text-foreground">
+            Style Selection <span className="text-error">*</span>
           </h2>
-          <p className="mb-4 text-sm text-gray-400">
+          <p className="mb-4 text-sm text-muted-foreground">
             Choose one or more visual styles for your ad images.
           </p>
-          {errors.styles && <p className="mb-3 text-xs text-red-500">{errors.styles}</p>}
+          {errors.styles && <p className="mb-3 text-xs text-error">{errors.styles}</p>}
 
           {stylesLoading ? (
             <div className="grid grid-cols-3 gap-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-40 animate-pulse rounded-lg bg-gray-100" />
+                <div key={i} className="h-40 animate-pulse rounded-lg bg-muted" />
               ))}
             </div>
           ) : allStyles.length === 0 ? (
-            <p className="text-sm text-gray-400">No styles available.</p>
+            <p className="text-sm text-muted-foreground">No styles available.</p>
           ) : (
             <div className="grid grid-cols-3 gap-3">
               {allStyles.map((style) => {
@@ -625,37 +625,37 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                       }}
                       className={`rounded-lg border-2 p-4 text-left transition-all ${
                         isSelected
-                          ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500/20"
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/20"
+                          : "border-border bg-card text-card-foreground hover:border-border"
                       }`}
                     >
                       <div className="mb-2 flex items-center justify-between">
-                        <p className="text-sm font-medium text-gray-900">{style.name}</p>
+                        <p className="text-sm font-medium text-foreground">{style.name}</p>
                         <div
                           className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
-                            isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                            isSelected ? "border-primary bg-primary text-primary-foreground" : "border-input"
                           }`}
                         >
                           {isSelected && (
-                            <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <svg className="h-3 w-3 " fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                             </svg>
                           )}
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500 line-clamp-3">
+                      <p className="text-xs text-muted-foreground line-clamp-3">
                         {style.prompt.replace(/[#*`[\]]/g, "").slice(0, 120)}...
                       </p>
                     </button>
                     <button
                       type="button"
                       onClick={() => setExpandedStyleId(isExpanded ? null : style.id)}
-                      className="mt-1 text-xs text-blue-500 hover:text-blue-600 text-left"
+                      className="mt-1 text-xs text-primary hover:opacity-90 text-left"
                     >
                       {isExpanded ? "Hide details" : "View full style guide"}
                     </button>
                     {isExpanded && (
-                      <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-4 prose prose-sm max-w-none">
+                      <div className="mt-2 rounded-lg border border-border bg-muted p-4 prose prose-sm max-w-none">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {style.prompt}
                         </ReactMarkdown>
@@ -669,15 +669,15 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         </section>
 
         {/* ============ Section 6 – Generate & Review ============ */}
-        <section className="rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="mb-4 text-base font-semibold text-gray-900">Generate & Review</h2>
+        <section className="rounded-xl border border-border bg-card text-card-foreground p-6">
+          <h2 className="mb-4 text-base font-semibold text-foreground">Generate & Review</h2>
 
           {/* Generate button */}
           <button
             type="button"
             onClick={handleGenerate}
             disabled={generating || saving}
-            className="flex items-center gap-2 rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium  transition-colors hover:opacity-90 disabled:opacity-50"
           >
             {generating ? (
               <>
@@ -699,14 +699,14 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
 
           {/* Progress indicator when generating */}
           {pendingImages.length > 0 && (
-            <div className="mt-4 flex items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
-              <svg className="h-5 w-5 shrink-0 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+            <div className="mt-4 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/10 px-4 py-3">
+              <svg className="h-5 w-5 shrink-0 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              <p className="text-sm text-blue-700">
+              <p className="text-sm text-primary">
                 Generating images... {completedImages.length} of {completedImages.length + pendingImages.length} ready
-                {failedImages.length > 0 && <span className="text-red-500"> ({failedImages.length} failed)</span>}
+                {failedImages.length > 0 && <span className="text-error"> ({failedImages.length} failed)</span>}
               </p>
             </div>
           )}
@@ -714,13 +714,13 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           {/* Image grid */}
           {generatedImages.length > 0 && (
             <div className="mt-6">
-              <p className="mb-3 text-sm font-medium text-gray-700">
+              <p className="mb-3 text-sm font-medium text-card-foreground">
                 {completedImages.length} image{completedImages.length !== 1 && "s"} ready
                 {pendingImages.length > 0 && `, ${pendingImages.length} generating`}
               </p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {generatedImages.map((img) => (
-                  <div key={img.id} className="group relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                  <div key={img.id} className="group relative overflow-hidden rounded-lg border border-border bg-muted">
                     {img.status === "completed" ? (
                       <>
                         <img
@@ -731,7 +731,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                         <button
                           type="button"
                           onClick={() => handleDeleteImage(img.id)}
-                          className="absolute right-2 top-2 rounded-md bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
+                          className="absolute right-2 top-2 rounded-md bg-black/60 p-1  opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -741,20 +741,20 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                     ) : img.status === "pending" ? (
                       <div className="flex aspect-square items-center justify-center">
                         <div className="flex flex-col items-center gap-2">
-                          <svg className="h-6 w-6 animate-spin text-blue-400" fill="none" viewBox="0 0 24 24">
+                          <svg className="h-6 w-6 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                           </svg>
-                          <span className="text-xs text-gray-400">Generating...</span>
+                          <span className="text-xs text-muted-foreground">Generating...</span>
                         </div>
                       </div>
                     ) : (
                       <div className="flex aspect-square items-center justify-center">
                         <div className="flex flex-col items-center gap-2">
-                          <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <svg className="h-6 w-6 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                           </svg>
-                          <span className="text-xs text-red-400">Failed</span>
+                          <span className="text-xs text-error">Failed</span>
                         </div>
                       </div>
                     )}
@@ -765,11 +765,11 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           )}
 
           {/* Action buttons */}
-          <div className="mt-6 flex items-center gap-3 border-t border-gray-100 pt-6">
+          <div className="mt-6 flex items-center gap-3 border-t border-border/50 pt-6">
             <button
               type="button"
               onClick={(() => router.push("/campaign"))}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              className="rounded-lg border border-input px-4 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
             >
               Cancel
             </button>
@@ -777,7 +777,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
               type="button"
               onClick={() => saveCampaign()}
               disabled={saving}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+              className="rounded-lg border border-input px-4 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
               {saving ? "Saving..." : isEditing ? "Update Campaign" : "Save as Draft"}
             </button>
@@ -785,7 +785,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
               type="button"
               onClick={handleActivate}
               disabled={activating || saving}
-              className="rounded-lg bg-emerald-500 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
+              className="rounded-lg bg-success text-success-foreground px-5 py-2 text-sm font-medium  transition-colors hover:opacity-90 disabled:opacity-50"
             >
               {activating ? "Activating..." : isEditing ? "Update & Activate" : "Create Campaign"}
             </button>

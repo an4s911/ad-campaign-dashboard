@@ -26,8 +26,8 @@ export default function TogglePills({ options, selected, onChange }: TogglePills
             onClick={() => toggle(option)}
             className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
               isActive
-                ? "border-blue-500 bg-blue-500 text-white"
-                : "border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-input bg-card text-card-foreground hover:border-border hover:bg-muted"
             }`}
           >
             {option}

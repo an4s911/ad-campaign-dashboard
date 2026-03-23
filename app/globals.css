@@ -1,14 +1,63 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
   --background: #f4f5f8;
   --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --success: #10b981;
+  --success-foreground: #ecfdf5;
+  --error: #f43f5e;
+  --error-foreground: #fff1f2;
+  --warning: #f59e0b;
+  --warning-foreground: #fffbeb;
+}
+
+.dark {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+  --border: #334155;
+  --input: #334155;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --success: #059669;
+  --success-foreground: #d1fae5;
+  --error: #e11d48;
+  --error-foreground: #ffe4e6;
+  --warning: #d97706;
+  --warning-foreground: #fffbeb;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-error: var(--error);
+  --color-error-foreground: var(--error-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

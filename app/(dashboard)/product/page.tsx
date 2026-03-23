@@ -79,12 +79,12 @@ export default function ProductPage() {
     return (
       <div>
         <div className="mb-6 flex items-center justify-between">
-          <div className="h-8 w-32 animate-pulse rounded bg-gray-200" />
-          <div className="h-10 w-32 animate-pulse rounded-lg bg-gray-200" />
+          <div className="h-8 w-32 animate-pulse rounded bg-muted" />
+          <div className="h-10 w-32 animate-pulse rounded-lg bg-muted" />
         </div>
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-gray-200" />
+            <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
           ))}
         </div>
       </div>
@@ -94,10 +94,10 @@ export default function ProductPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+        <h1 className="text-2xl font-bold text-foreground">Products</h1>
         <Link
           href="/product/new"
-          className="flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:opacity-90"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -107,24 +107,24 @@ export default function ProductPage() {
       </div>
 
       {products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white py-16">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-            <svg className="h-7 w-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card py-16 text-card-foreground">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+            <svg className="h-7 w-7 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
             </svg>
           </div>
-          <h3 className="mb-1 text-base font-semibold text-gray-700">No products yet</h3>
-          <p className="mb-4 text-sm text-gray-400">Add your first product to get started.</p>
+          <h3 className="mb-1 text-base font-semibold text-card-foreground">No products yet</h3>
+          <p className="mb-4 text-sm text-muted-foreground">Add your first product to get started.</p>
           <Link
             href="/product/new"
-            className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all hover:opacity-90"
           >
             Add First Product
           </Link>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <div className="grid grid-cols-[48px_1fr_1.5fr_100px_140px] items-center gap-4 border-b border-gray-100 bg-gray-50/80 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="grid grid-cols-[48px_1fr_1.5fr_100px_140px] items-center gap-4 border-b border-border bg-muted/30 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <span />
             <span>Name</span>
             <span>Description</span>
@@ -135,9 +135,9 @@ export default function ProductPage() {
           {products.map((product) => (
             <div
               key={product.id}
-              className="grid grid-cols-[48px_1fr_1.5fr_100px_140px] items-center gap-4 border-b border-gray-50 px-4 py-3 transition-colors last:border-b-0 hover:bg-gray-50/50"
+              className="grid grid-cols-[48px_1fr_1.5fr_100px_140px] items-center gap-4 border-b border-border/50 px-4 py-3 transition-colors last:border-b-0 hover:bg-muted/50"
             >
-              <div className="h-10 w-10 overflow-hidden rounded-lg bg-gray-100">
+              <div className="h-10 w-10 overflow-hidden rounded-lg bg-muted">
                 <img
                   src={product.imageUrl1}
                   alt={product.name}
@@ -145,9 +145,9 @@ export default function ProductPage() {
                 />
               </div>
 
-              <span className="truncate text-sm font-medium text-gray-900">{product.name}</span>
+              <span className="truncate text-sm font-medium text-foreground">{product.name}</span>
 
-              <span className="truncate text-sm text-gray-500">
+              <span className="truncate text-sm text-muted-foreground">
                 {product.description.length > 60
                   ? product.description.slice(0, 60) + "..."
                   : product.description}
@@ -155,9 +155,9 @@ export default function ProductPage() {
 
               <span className="flex items-center gap-1.5">
                 <span
-                  className={`h-2 w-2 rounded-full ${product.isEnabled ? "bg-emerald-400" : "bg-gray-300"}`}
+                  className={`h-2 w-2 rounded-full ${product.isEnabled ? "bg-success" : "bg-muted-foreground"}`}
                 />
-                <span className={`text-xs font-medium ${product.isEnabled ? "text-emerald-600" : "text-gray-400"}`}>
+                <span className={`text-xs font-medium ${product.isEnabled ? "text-success" : "text-muted-foreground"}`}>
                   {product.isEnabled ? "Active" : "Disabled"}
                 </span>
               </span>
@@ -166,7 +166,7 @@ export default function ProductPage() {
                 <Link
                   href={`/product/${product.id}`}
                   title="Edit"
-                  className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
@@ -175,7 +175,7 @@ export default function ProductPage() {
                 <button
                   onClick={() => handleToggleEnabled(product)}
                   title={product.isEnabled ? "Disable" : "Enable"}
-                  className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   {product.isEnabled ? (
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -191,7 +191,7 @@ export default function ProductPage() {
                 <button
                   onClick={() => handleDelete(product)}
                   title="Delete"
-                  className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-error/10 hover:text-error"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />

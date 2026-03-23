@@ -43,10 +43,10 @@ export default function SetupForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 space-y-4"
+      className="bg-card text-card-foreground border border-border rounded-lg shadow-lg p-6 space-y-4"
     >
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-error/10 border border-error/20 text-error px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}
@@ -75,14 +75,14 @@ export default function SetupForm() {
           required
           className="mt-1"
         />
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           Lowercase letters, numbers, and underscores only
         </p>
       </div>
 
       <div>
         <Label htmlFor="email">
-          Email <span className="text-gray-400">(optional)</span>
+          Email <span className="text-muted-foreground">(optional)</span>
         </Label>
         <Input
           id="email"
@@ -94,9 +94,9 @@ export default function SetupForm() {
         />
       </div>
 
-      <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-4 py-3 rounded-lg text-sm">
+      <div className="bg-warning/10 border border-warning/20 text-warning px-4 py-3 rounded-lg text-sm">
         The initial password is set from the{" "}
-        <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded">
+        <code className="font-mono bg-warning/20 px-1 rounded">
           SUPER_PASSWORD
         </code>{" "}
         environment variable. You will be prompted to change it after login.
