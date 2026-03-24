@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 
 interface Product {
@@ -18,6 +19,7 @@ interface Product {
 const passthroughImageLoader = ({ src }: { src: string }) => src;
 
 export default function ProductPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -140,11 +142,15 @@ export default function ProductPage() {
           {products.map((product) => (
             <div
               key={product.id}
-              className="grid grid-cols-[48px_1fr_1.5fr_100px_140px] items-center gap-4 border-b border-border/50 px-4 py-3 transition-colors last:border-b-0 hover:bg-muted/50"
+              onClick={() => router.push(`/product/${product.id}`)}
+              className="grid grid-cols-[48px_1fr_1.5fr_100px_140px] items-center gap-4 cursor-pointer border-b border-border/50 px-4 py-3 transition-colors last:border-b-0 hover:bg-muted/50"
             >
               <div 
                 className="relative h-10 w-10 shrink-0 cursor-zoom-in overflow-hidden rounded-lg bg-muted transition-transform hover:scale-105"
-                onClick={() => setPreviewImageUrl(product.imageUrl1)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPreviewImageUrl(product.imageUrl1);
+                }}
               >
                 <Image
                   src={product.imageUrl1}
@@ -177,6 +183,7 @@ export default function ProductPage() {
               <div className="flex items-center justify-end gap-1">
                 <Link
                   href={`/product/${product.id}`}
+                  onClick={(e) => e.stopPropagation()}
                   title="Edit"
                   className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
@@ -185,7 +192,10 @@ export default function ProductPage() {
                   </svg>
                 </Link>
                 <button
-                  onClick={() => handleToggleEnabled(product)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleEnabled(product);
+                  }}
                   title={product.isEnabled ? "Disable" : "Enable"}
                   className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
@@ -201,7 +211,10 @@ export default function ProductPage() {
                   )}
                 </button>
                 <button
-                  onClick={() => handleDelete(product)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(product);
+                  }}
                   title="Delete"
                   className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-error/10 hover:text-error"
                 >

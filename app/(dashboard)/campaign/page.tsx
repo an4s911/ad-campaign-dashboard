@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface CampaignListItem {
   id: string;
@@ -14,6 +15,7 @@ interface CampaignListItem {
 }
 
 export default function CampaignPage() {
+  const router = useRouter();
   const [campaigns, setCampaigns] = useState<CampaignListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
@@ -171,7 +173,8 @@ export default function CampaignPage() {
             return (
               <div
                 key={campaign.id}
-                className="grid grid-cols-[1.5fr_90px_90px_90px_110px_130px] items-center gap-4 border-b border-border/50 px-4 py-3 transition-colors last:border-b-0 hover:bg-muted/50"
+                onClick={() => router.push(`/campaign/${campaign.id}`)}
+                className="grid grid-cols-[1.5fr_90px_90px_90px_110px_130px] items-center gap-4 cursor-pointer border-b border-border/50 px-4 py-3 transition-colors last:border-b-0 hover:bg-muted/50"
               >
                 <span className="truncate text-sm font-medium text-foreground">{campaign.name}</span>
                 <span className="flex items-center gap-1.5">
@@ -184,6 +187,7 @@ export default function CampaignPage() {
                 <div className="flex items-center justify-end gap-1">
                   <Link
                     href={`/campaign/${campaign.id}`}
+                    onClick={(e) => e.stopPropagation()}
                     title="Edit"
                     className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   >
@@ -192,7 +196,10 @@ export default function CampaignPage() {
                     </svg>
                   </Link>
                   <button
-                    onClick={() => handleToggleStatus(campaign)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleStatus(campaign);
+                    }}
                     title={campaign.status === "active" ? "Disable" : "Activate"}
                     className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   >
@@ -207,7 +214,10 @@ export default function CampaignPage() {
                     )}
                   </button>
                   <button
-                    onClick={() => handleDelete(campaign)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(campaign);
+                    }}
                     title="Delete"
                     className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-error/10 hover:text-error"
                   >
