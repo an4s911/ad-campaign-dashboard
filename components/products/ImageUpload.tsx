@@ -2,6 +2,7 @@
 
 import { useRef, useState, DragEvent } from "react";
 import Image from "next/image";
+import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 
 interface ImageUploadProps {
   label: string;
@@ -16,6 +17,7 @@ const passthroughImageLoader = ({ src }: { src: string }) => src;
 export default function ImageUpload({ label, value, required, onChange, error }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function uploadFile(file: File) {
@@ -69,16 +71,20 @@ export default function ImageUpload({ label, value, required, onChange, error }:
       </label>
 
       {value ? (
-        <div className="relative inline-block">
-          <Image
-            src={value}
-            alt="Preview"
-            width={96}
-            height={96}
-            loader={passthroughImageLoader}
-            unoptimized
-            className="h-auto w-auto rounded-lg border border-border object-cover bg-muted"
-          />
+        <div className="relative block w-full">
+          <div 
+            className="relative w-full aspect-square cursor-zoom-in overflow-hidden rounded-lg border border-border bg-muted transition-transform hover:scale-105"
+            onClick={() => setPreviewImageUrl(value)}
+          >
+            <Image
+              src={value}
+              alt="Preview"
+              fill
+              loader={passthroughImageLoader}
+              unoptimized
+              className="object-cover"
+            />
+          </div>
           <button
             type="button"
             onClick={handleRemove}
@@ -95,7 +101,7 @@ export default function ImageUpload({ label, value, required, onChange, error }:
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
-          className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 transition-colors ${
+          className={`flex w-full aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-4 text-center transition-colors ${
             dragOver
               ? "border-primary/50 bg-primary/10"
               : error
@@ -134,6 +140,7 @@ export default function ImageUpload({ label, value, required, onChange, error }:
         className="hidden"
         onChange={handleFileSelect}
       />
+      <ImagePreviewModal imageUrl={previewImageUrl} onClose={() => setPreviewImageUrl(null)} />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 
 interface Product {
   id: string;
@@ -19,6 +20,7 @@ const passthroughImageLoader = ({ src }: { src: string }) => src;
 export default function ProductPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -140,7 +142,10 @@ export default function ProductPage() {
               key={product.id}
               className="grid grid-cols-[48px_1fr_1.5fr_100px_140px] items-center gap-4 border-b border-border/50 px-4 py-3 transition-colors last:border-b-0 hover:bg-muted/50"
             >
-              <div className="relative h-10 w-10 overflow-hidden rounded-lg bg-muted">
+              <div 
+                className="relative h-10 w-10 shrink-0 cursor-zoom-in overflow-hidden rounded-lg bg-muted transition-transform hover:scale-105"
+                onClick={() => setPreviewImageUrl(product.imageUrl1)}
+              >
                 <Image
                   src={product.imageUrl1}
                   alt={product.name}
@@ -209,6 +214,7 @@ export default function ProductPage() {
           ))}
         </div>
       )}
+      <ImagePreviewModal imageUrl={previewImageUrl} onClose={() => setPreviewImageUrl(null)} />
     </div>
   );
 }

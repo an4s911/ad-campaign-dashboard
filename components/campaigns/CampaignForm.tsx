@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import TogglePills from "@/components/campaigns/TogglePills";
 import StyleCard from "@/components/styles/StyleCard";
 import StylePreviewModal, { StylePreviewData } from "@/components/styles/StylePreviewModal";
+import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 
 interface Product {
   id: string;
@@ -78,6 +79,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   const [campaignStatus, setCampaignStatus] = useState<string>("draft");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function showToast(message: string, type: "error" | "success") {
@@ -214,6 +216,19 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       }
     };
   }, [hasPending, savedCampaignId]);
+
+  useEffect(() => {
+    if (!previewImageUrl) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setPreviewImageUrl(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previewImageUrl]);
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
@@ -643,7 +658,13 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                             : "border-border bg-card text-card-foreground hover:border-border"
                       }`}
                     >
-                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+                      <div 
+                        className="relative h-12 w-12 shrink-0 cursor-zoom-in overflow-hidden rounded-lg bg-muted transition-transform hover:scale-105"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewImageUrl(product.imageUrl1);
+                        }}
+                      >
                         <Image
                           src={product.imageUrl1}
                           alt={product.name}
@@ -904,15 +925,20 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   <div key={img.id} className="group relative overflow-hidden rounded-lg border border-border bg-muted">
                     {img.status === "completed" ? (
                       <>
-                        <Image
-                          src={img.imageUrl}
-                          alt="Generated ad"
-                          fill
-                          sizes="(min-width: 640px) 33vw, 50vw"
-                          loader={passthroughImageLoader}
-                          unoptimized
-                          className="object-cover"
-                        />
+                        <div 
+                          className="relative h-full w-full cursor-pointer overflow-hidden rounded-lg"
+                          onClick={() => setPreviewImageUrl(img.imageUrl)}
+                        >
+                          <Image
+                            src={img.imageUrl}
+                            alt="Generated ad"
+                            fill
+                            sizes="(min-width: 640px) 33vw, 50vw"
+                            loader={passthroughImageLoader}
+                            unoptimized
+                            className="object-cover transition-transform duration-300 hover:scale-105"
+                          />
+                        </div>
                         <button
                           type="button"
                           onClick={() => handleDeleteImage(img.id)}
@@ -991,6 +1017,11 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       <StylePreviewModal
         style={previewStyle}
         onClose={() => setPreviewStyle(null)}
+      />
+
+      <ImagePreviewModal 
+        imageUrl={previewImageUrl} 
+        onClose={() => setPreviewImageUrl(null)} 
       />
     </div>
   );
