@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import TogglePills from "@/components/campaigns/TogglePills";
@@ -71,8 +71,11 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   const [savedCampaignId, setSavedCampaignId] = useState<string | null>(campaignId);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [generateTotal, setGenerateTotal] = useState(0);
+  const [generateDone, setGenerateDone] = useState(0);
   const [saving, setSaving] = useState(false);
   const [activating, setActivating] = useState(false);
+  const [campaignStatus, setCampaignStatus] = useState<string>("draft");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -81,6 +84,38 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
   }
+
+  // Count non-empty ideas
+  const activeIdeas = useMemo(
+    () => ideas.filter((i) => i.trim() !== ""),
+    [ideas]
+  );
+
+  // Real-time validation for generate button
+  const canGenerate = useMemo(() => {
+    if (!name.trim()) return false;
+    if (!adCount || adCount < 1) return false;
+    if (selectedProductIds.length === 0) return false;
+    if (selectedProductIds.length > adCount) return false;
+    if (activeIdeas.length === 0) return false;
+    if (activeIdeas.length > adCount) return false;
+    if (selectedStyleIds.length === 0) return false;
+    if (selectedStyleIds.length > adCount) return false;
+    return true;
+  }, [name, adCount, selectedProductIds.length, activeIdeas.length, selectedStyleIds.length]);
+
+  // Validation hint message for disabled generate button
+  const generateHint = useMemo(() => {
+    if (!name.trim()) return "Enter a campaign name";
+    if (!adCount || adCount < 1) return "Set number of ads";
+    if (selectedProductIds.length === 0) return "Select at least one product";
+    if (selectedProductIds.length > adCount) return `Too many products (${selectedProductIds.length}) for ${adCount} ads`;
+    if (activeIdeas.length === 0) return "Add at least one idea";
+    if (activeIdeas.length > adCount) return `Too many active ideas (${activeIdeas.length}) for ${adCount} ads`;
+    if (selectedStyleIds.length === 0) return "Select at least one style";
+    if (selectedStyleIds.length > adCount) return `Too many styles (${selectedStyleIds.length}) for ${adCount} ads`;
+    return "";
+  }, [name, adCount, selectedProductIds.length, activeIdeas.length, selectedStyleIds.length]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -134,6 +169,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         setSelectedStyleIds(
           data.styles.map((cs: { styleId: string }) => cs.styleId)
         );
+        setCampaignStatus(data.status ?? "draft");
         if (data.generatedImages?.length > 0) {
           setGeneratedImages(data.generatedImages);
         }
@@ -143,6 +179,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     })();
   }, [campaignId]);
 
+  // Polling fallback for old-style images with replicatePredictionId
   const hasPending = generatedImages.some((img) => img.status === "pending");
 
   useEffect(() => {
@@ -183,8 +220,11 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     if (!name.trim()) errs.name = "Campaign name is required";
     if (!adCount || adCount < 1) errs.adCount = "Must be at least 1";
     if (selectedProductIds.length === 0) errs.products = "Select at least one product";
-    if (ideas.every((i) => !i.trim())) errs.ideas = "Add at least one idea";
+    if (selectedProductIds.length > adCount) errs.products = `Max ${adCount} products for ${adCount} ads`;
+    if (activeIdeas.length === 0) errs.ideas = "Add at least one idea";
+    if (activeIdeas.length > adCount) errs.ideas = `Max ${adCount} ideas for ${adCount} ads`;
     if (selectedStyleIds.length === 0) errs.styles = "Select at least one style";
+    if (selectedStyleIds.length > adCount) errs.styles = `Max ${adCount} styles for ${adCount} ads`;
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -195,6 +235,24 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
 
   function buildStyles(): string[] {
     return selectedStyleIds;
+  }
+
+  // Handle adCount changes with auto-deselection logic
+  function handleAdCountChange(newValue: number) {
+    const clamped = Math.max(1, newValue);
+    setAdCount(clamped);
+
+    // Auto-deselect excess products (keep first N)
+    if (selectedProductIds.length > clamped) {
+      setSelectedProductIds((prev) => prev.slice(0, clamped));
+    }
+
+    // Auto-deselect excess styles (keep first N, i.e. deselect most recently added)
+    if (selectedStyleIds.length > clamped) {
+      setSelectedStyleIds((prev) => prev.slice(0, clamped));
+    }
+
+    // Ideas: do NOT delete. They become visually disabled via the render logic.
   }
 
   async function saveCampaign(status: "draft" | "active" = "draft") {
@@ -240,6 +298,9 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   async function handleGenerate() {
     if (!validate()) return;
 
+    // Generation is tied to a persisted campaign id because the backend stores
+    // each generated image against that campaign while it streams progress back.
+    // If the user is working on a new draft, save it first.
     let targetId = savedCampaignId;
     if (!targetId) {
       setSaving(true);
@@ -278,16 +339,92 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     if (!targetId) return;
 
     setGenerating(true);
+    setGenerateTotal(0);
+    setGenerateDone(0);
+
+    console.log("[handleGenerate] starting SSE fetch to", `/api/campaigns/${targetId}/generate`); // DEBUG
+
     try {
-      const res = await fetch(`/api/campaigns/${targetId}/generate`, { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        setGeneratedImages((prev) => [...prev, ...data.images]);
-        showToast(`Generating ${data.images.length} images...`, "success");
-      } else {
-        showToast(data.error || "Generation failed", "error");
+      // This endpoint does not return a single JSON payload. It keeps the
+      // request open and streams SSE messages as each image finishes or fails.
+      const response = await fetch(`/api/campaigns/${targetId}/generate`, { method: "POST" });
+
+      console.log("[handleGenerate] response status:", response.status, response.statusText); // DEBUG
+      console.log("[handleGenerate] content-type:", response.headers.get("content-type")); // DEBUG
+
+      if (!response.ok) {
+        // Early validation/loading failures come back as a normal JSON error
+        // response instead of an SSE stream.
+        try {
+          const data = await response.json();
+          console.log("[handleGenerate] error response body:", data); // DEBUG
+          showToast(data.error || "Generation failed", "error");
+        } catch {
+          showToast("Generation failed", "error");
+        }
+        return;
       }
-    } catch {
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        console.log("[handleGenerate] no reader available on response body"); // DEBUG
+        showToast("Streaming not supported", "error");
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          console.log("[handleGenerate] SSE stream ended"); // DEBUG
+          break;
+        }
+
+        const chunk = decoder.decode(value, { stream: true });
+        console.log("[handleGenerate] SSE chunk received:", chunk.slice(0, 200)); // DEBUG
+        buffer += chunk;
+        // SSE messages are separated by a blank line. Network chunks do not
+        // necessarily line up with message boundaries, so keep any incomplete
+        // tail in `buffer` until the next read completes it.
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith("data: ")) continue;
+          try {
+            // The backend sends JSON inside each SSE `data:` line. The event
+            // types come from app/api/campaigns/[id]/generate/route.ts.
+            const event = JSON.parse(line.slice(6));
+            console.log("[handleGenerate] SSE event:", event.type, event); // DEBUG
+            if (event.type === "start") {
+              // First event announces how many generation tasks the backend
+              // queued, so the UI can initialize progress.
+              setGenerateTotal(event.total);
+              showToast(`Generating ${event.total} images...`, "success");
+            } else if (event.type === "image") {
+              // Successful generations stream back the saved DB record for the
+              // new image, which we append immediately to the gallery.
+              setGeneratedImages((prev) => [...prev, event.image]);
+              setGenerateDone((prev) => prev + 1);
+            } else if (event.type === "error") {
+              console.error("[handleGenerate] generation error for index", event.index, ":", event.error); // DEBUG
+              // Failed tasks still increment progress so the progress bar
+              // reaches completion even when some images fail.
+              if (event.image) {
+                setGeneratedImages((prev) => [...prev, event.image]);
+              }
+              setGenerateDone((prev) => prev + 1);
+            }
+          } catch (parseErr) {
+            console.error("[handleGenerate] SSE parse error:", parseErr, "raw:", line.slice(0, 200)); // DEBUG
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[handleGenerate] fetch error:", err); // DEBUG
       showToast("Failed to start generation", "error");
     } finally {
       setGenerating(false);
@@ -322,6 +459,26 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     }
   }
 
+  async function handleToggleStatus() {
+    if (!savedCampaignId) return;
+    const newStatus = campaignStatus === "active" ? "disabled" : "active";
+    try {
+      const res = await fetch(`/api/campaigns/${savedCampaignId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setCampaignStatus(newStatus);
+        showToast(`Campaign ${newStatus === "active" ? "activated" : "disabled"}`, "success");
+      } else {
+        showToast("Failed to update status", "error");
+      }
+    } catch {
+      showToast("Failed to update status", "error");
+    }
+  }
+
   function updateIdea(index: number, value: string) {
     setIdeas((prev) => prev.map((v, i) => (i === index ? value : v)));
   }
@@ -336,10 +493,32 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   }
 
   function toggleProduct(id: string) {
-    setSelectedProductIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setSelectedProductIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= adCount) return prev; // At limit
+      return [...prev, id];
+    });
     if (errors.products) setErrors((e) => ({ ...e, products: "" }));
+  }
+
+  function toggleStyle(styleId: string) {
+    setSelectedStyleIds((prev) => {
+      if (prev.includes(styleId)) return prev.filter((x) => x !== styleId);
+      if (prev.length >= adCount) return prev; // At limit
+      return [...prev, styleId];
+    });
+    if (errors.styles) setErrors((e) => ({ ...e, styles: "" }));
+  }
+
+  // Determine which ideas are disabled (overflow beyond adCount)
+  function isIdeaDisabled(index: number): boolean {
+    // Count non-empty ideas before and including this one
+    let activeCount = 0;
+    for (let i = 0; i <= index; i++) {
+      if (ideas[i].trim() !== "") activeCount++;
+    }
+    // This idea is disabled if it's non-empty and its active position exceeds adCount
+    return ideas[index].trim() !== "" && activeCount > adCount;
   }
 
   const completedImages = generatedImages.filter((img) => img.status === "completed");
@@ -370,6 +549,30 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         <h1 className="text-2xl font-bold text-foreground">
           {isEditing ? "Edit Campaign" : "New Campaign"}
         </h1>
+
+        {/* Active/Inactive toggle — only shown when editing an existing campaign */}
+        {isEditing && savedCampaignId && (
+          <div className="ml-auto flex items-center gap-3">
+            <span className={`text-sm font-medium ${campaignStatus === "active" ? "text-success" : "text-muted-foreground"}`}>
+              {campaignStatus === "active" ? "Active" : campaignStatus === "disabled" ? "Disabled" : "Draft"}
+            </span>
+            {campaignStatus !== "draft" && (
+              <button
+                type="button"
+                onClick={handleToggleStatus}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                  campaignStatus === "active" ? "bg-success" : "bg-muted"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    campaignStatus === "active" ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-8">
@@ -402,7 +605,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                 type="number"
                 min={1}
                 value={adCount}
-                onChange={(e) => setAdCount(parseInt(e.target.value) || 1)}
+                onChange={(e) => handleAdCountChange(parseInt(e.target.value) || 1)}
                 className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
                   errors.adCount ? "border-error/50" : "border-input"
                 }`}
@@ -413,8 +616,15 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         </section>
 
         <section className="rounded-xl border border-border bg-card p-6 text-card-foreground">
-          <h2 className="mb-1 text-base font-semibold text-foreground">Select Products <span className="text-error">*</span></h2>
-          <p className="mb-4 text-sm text-muted-foreground">Choose the products to feature in this campaign.</p>
+          <div className="mb-4 flex items-baseline justify-between">
+            <div>
+              <h2 className="mb-1 text-base font-semibold text-foreground">Select Products <span className="text-error">*</span></h2>
+              <p className="text-sm text-muted-foreground">Choose the products to feature in this campaign.</p>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {selectedProductIds.length}/{adCount} selected
+            </span>
+          </div>
           {errors.products && <p className="mb-3 text-xs text-error">{errors.products}</p>}
 
           {productsLoading ? (
@@ -431,15 +641,19 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                 .filter((p) => p.isEnabled)
                 .map((product) => {
                   const isSelected = selectedProductIds.includes(product.id);
+                  const atLimit = !isSelected && selectedProductIds.length >= adCount;
                   return (
                     <button
                       key={product.id}
                       type="button"
                       onClick={() => toggleProduct(product.id)}
+                      disabled={atLimit}
                       className={`flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all ${
                         isSelected
                           ? "border-primary bg-primary/10 ring-1 ring-primary/20"
-                          : "border-border bg-card text-card-foreground hover:border-border"
+                          : atLimit
+                            ? "cursor-not-allowed border-border bg-muted/50 opacity-50"
+                            : "border-border bg-card text-card-foreground hover:border-border"
                       }`}
                     >
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -522,36 +736,58 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         </section>
 
         <section className="rounded-xl border border-border bg-card p-6 text-card-foreground">
-          <h2 className="mb-1 text-base font-semibold text-foreground">Campaign Ideas</h2>
-          <p className="mb-4 text-sm text-muted-foreground">Describe your vision for the ad images.</p>
+          <div className="mb-4 flex items-baseline justify-between">
+            <div>
+              <h2 className="mb-1 text-base font-semibold text-foreground">Campaign Ideas</h2>
+              <p className="text-sm text-muted-foreground">Describe your vision for the ad images.</p>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {activeIdeas.length}/{adCount} active
+            </span>
+          </div>
           {errors.ideas && <p className="mb-3 text-xs text-error">{errors.ideas}</p>}
 
           <div className="space-y-3">
-            {ideas.map((idea, index) => (
-              <div key={index} className="flex gap-2">
-                <textarea
-                  value={idea}
-                  onChange={(e) => {
-                    updateIdea(index, e.target.value);
-                    if (errors.ideas) setErrors((p) => ({ ...p, ideas: "" }));
-                  }}
-                  placeholder={`Idea ${index + 1}: Describe an ad concept...`}
-                  rows={2}
-                  className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-                {ideas.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeIdea(index)}
-                    className="mt-1 self-start rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-error/10 hover:text-error"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            ))}
+            {ideas.map((idea, index) => {
+              const disabled = isIdeaDisabled(index);
+              return (
+                <div key={index} className={`flex gap-2 ${disabled ? "opacity-50" : ""}`}>
+                  <textarea
+                    value={idea}
+                    onChange={(e) => {
+                      updateIdea(index, e.target.value);
+                      if (errors.ideas) setErrors((p) => ({ ...p, ideas: "" }));
+                    }}
+                    disabled={disabled}
+                    placeholder={`Idea ${index + 1}: Describe an ad concept...`}
+                    rows={2}
+                    className={`flex-1 resize-none rounded-lg border px-3 py-2 text-sm ${
+                      disabled
+                        ? "cursor-not-allowed border-input bg-muted text-muted-foreground"
+                        : "border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    }`}
+                  />
+                  <div className="flex flex-col items-end gap-1 self-start">
+                    {disabled && (
+                      <span className="mt-1 whitespace-nowrap rounded bg-warning/10 px-2 py-0.5 text-xs text-warning">
+                        Exceeds ad limit
+                      </span>
+                    )}
+                    {ideas.length > 1 && !disabled && (
+                      <button
+                        type="button"
+                        onClick={() => removeIdea(index)}
+                        className="mt-1 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-error/10 hover:text-error"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <button
@@ -567,12 +803,19 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         </section>
 
         <section className="rounded-xl border border-border bg-card p-6 text-card-foreground">
-          <h2 className="mb-1 text-base font-semibold text-foreground">
-            Style Selection <span className="text-error">*</span>
-          </h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Choose one or more visual styles for your ad images.
-          </p>
+          <div className="mb-4 flex items-baseline justify-between">
+            <div>
+              <h2 className="mb-1 text-base font-semibold text-foreground">
+                Style Selection <span className="text-error">*</span>
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Choose one or more visual styles for your ad images.
+              </p>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {selectedStyleIds.length}/{adCount} selected
+            </span>
+          </div>
           {errors.styles && <p className="mb-3 text-xs text-error">{errors.styles}</p>}
 
           {stylesLoading ? (
@@ -592,14 +835,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                     key={style.id}
                     style={style}
                     selected={isSelected}
-                    onSelect={() => {
-                      setSelectedStyleIds((prev) =>
-                        prev.includes(style.id)
-                          ? prev.filter((x) => x !== style.id)
-                          : [...prev, style.id]
-                      );
-                      if (errors.styles) setErrors((e) => ({ ...e, styles: "" }));
-                    }}
+                    onSelect={() => toggleStyle(style.id)}
                     onPreview={() => setPreviewStyle(style)}
                     previewTrigger="preview-pane"
                     showCheckbox
@@ -613,31 +849,50 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         <section className="rounded-xl border border-border bg-card p-6 text-card-foreground">
           <h2 className="mb-4 text-base font-semibold text-foreground">Generate & Review</h2>
 
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={generating || saving}
-            className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
-          >
-            {generating ? (
-              <>
-                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Starting...
-              </>
-            ) : (
-              <>
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-                </svg>
-                {generatedImages.length > 0 ? `Generate ${adCount} More` : `Generate ${adCount} Ads`}
-              </>
+          <div>
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={generating || saving || !canGenerate}
+              className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
+            >
+              {generating ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Generating {generateDone}/{generateTotal}...
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                  </svg>
+                  {generatedImages.length > 0 ? `Generate ${adCount} More` : `Generate ${adCount} Ads`}
+                </>
+              )}
+            </button>
+            {!canGenerate && !generating && generateHint && (
+              <p className="mt-2 text-xs text-muted-foreground">{generateHint}</p>
             )}
-          </button>
+          </div>
 
-          {pendingImages.length > 0 && (
+          {/* Progress indicator during SSE generation */}
+          {generating && generateTotal > 0 && (
+            <div className="mt-4 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/10 px-4 py-3">
+              <svg className="h-5 w-5 shrink-0 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <p className="text-sm text-primary">
+                Generating {generateDone}/{generateTotal} images...
+              </p>
+            </div>
+          )}
+
+          {/* Polling fallback progress for old-style pending images */}
+          {!generating && pendingImages.length > 0 && (
             <div className="mt-4 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/10 px-4 py-3">
               <svg className="h-5 w-5 shrink-0 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -655,6 +910,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
               <p className="mb-3 text-sm font-medium text-card-foreground">
                 {completedImages.length} image{completedImages.length !== 1 && "s"} ready
                 {pendingImages.length > 0 && `, ${pendingImages.length} generating`}
+                {failedImages.length > 0 && `, ${failedImages.length} failed`}
               </p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {generatedImages.map((img) => (
@@ -691,14 +947,25 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex aspect-square items-center justify-center">
-                        <div className="flex flex-col items-center gap-2">
-                          <svg className="h-6 w-6 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-                          </svg>
-                          <span className="text-xs text-muted-foreground">Failed</span>
+                      <>
+                        <div className="flex aspect-square items-center justify-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <svg className="h-6 w-6 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                            </svg>
+                            <span className="text-xs text-muted-foreground">Failed</span>
+                          </div>
                         </div>
-                      </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteImage(img.id)}
+                          className="absolute right-2 top-2 rounded-md bg-black/60 p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                          </svg>
+                        </button>
+                      </>
                     )}
                     <div className="relative aspect-square" />
                   </div>

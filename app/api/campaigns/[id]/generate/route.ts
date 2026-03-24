@@ -1,19 +1,66 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import Replicate from "replicate";
 import prisma from "@/lib/prisma";
+import { downloadAndStoreImage } from "@/lib/image-storage";
+import { readFile } from "fs/promises";
+import path from "path";
+
+export const maxDuration = 300;
 
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
-const TEXT_MODEL = "meta/meta-llama-3-70b-instruct";
+const TEXT_MODEL = "google/gemini-3-flash";
+const IMAGE_MODEL = "google/nano-banana";
+
+interface Combo {
+  product: {
+    name: string;
+    description: string;
+    imageUrl1: string;
+    imageUrl2: string | null;
+  };
+  idea: string;
+  stylePrompt: string;
+}
+
+/**
+ * Convert an image URL to a format Replicate can access.
+ * - If already a public https URL, return as-is.
+ * - If a local /uploads/... path, upload to Replicate's file hosting
+ *   via replicate.files.create() and return the served URL.
+ */
+async function toReplicateImage(url: string): Promise<string> {
+  if (url.startsWith("https://")) return url;
+  if (url.startsWith("http://") && !url.includes("localhost") && !url.includes("127.0.0.1")) return url;
+
+  // Local path — upload to Replicate's file hosting so models can access it
+  const localPath = url.startsWith("/") ? url : `/${url}`;
+  const filePath = path.join(process.cwd(), "public", localPath);
+  console.log(`[generate] uploading local file to Replicate: ${filePath}`); // DEBUG
+  const buffer = await readFile(filePath);
+  const ext = path.extname(filePath).toLowerCase();
+  const mimeType = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : ext === ".gif" ? "image/gif" : "image/jpeg";
+  const filename = path.basename(filePath);
+
+  const file = await replicate.files.create(
+    new Blob([buffer], { type: mimeType }),
+    { filename, content_type: mimeType }
+  );
+
+  const fileUrl = (file as { urls?: { get?: string } }).urls?.get ?? "";
+  console.log(`[generate] uploaded to Replicate: ${fileUrl.slice(0, 100)}`); // DEBUG
+  return fileUrl;
+}
 
 export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
+  const { id } = await params;
 
-    const campaign = await prisma.campaign.findUnique({
+  let campaign;
+  try {
+    campaign = await prisma.campaign.findUnique({
       where: { id },
       include: {
         products: { include: { product: true } },
@@ -21,144 +68,229 @@ export async function POST(
         styles: { include: { style: true } },
       },
     });
+  } catch (error) {
+    console.error("Failed to load campaign:", error);
+    return Response.json({ error: "Failed to load campaign" }, { status: 500 });
+  }
 
-    if (!campaign) {
-      return NextResponse.json(
-        { error: "Campaign not found" },
-        { status: 404 }
-      );
-    }
+  if (!campaign) {
+    return Response.json({ error: "Campaign not found" }, { status: 404 });
+  }
 
-    const ideas = campaign.ideas;
-    const styles = campaign.styles;
+  const ideas = campaign.ideas;
+  const styles = campaign.styles;
+  const products = campaign.products;
 
-    if (ideas.length === 0 || styles.length === 0) {
-      return NextResponse.json(
-        { error: "Campaign needs at least one idea and one style" },
-        { status: 400 }
-      );
-    }
+  if (ideas.length === 0 || styles.length === 0 || products.length === 0) {
+    return Response.json(
+      { error: "Campaign needs at least one product, one idea, and one style" },
+      { status: 400 }
+    );
+  }
 
-    const productInfo = campaign.products
-      .map((cp) => `- ${cp.product.name}: ${cp.product.description}`)
-      .join("\n");
-
-    const targetingContext = [
-      `Target audience tags: ${JSON.stringify(campaign.targetTags)}`,
-      `Target gender: ${JSON.stringify(campaign.targetGender)}`,
-      `Age range: ${campaign.targetAgeMin ?? "any"} - ${campaign.targetAgeMax ?? "any"}`,
-      `Store categories: ${JSON.stringify(campaign.targetStoreCategories)}`,
-    ].join("\n");
-
-    // Build style × idea combos — ideas rotate first so every idea gets used
-    const combos: { idea: string; stylePrompt: string }[] = [];
-    for (const cs of styles) {
-      for (const idea of ideas) {
+  // Build combo queue: products × ideas × styles
+  const combos: Combo[] = [];
+  for (const cp of products) {
+    for (const idea of ideas) {
+      for (const cs of styles) {
         combos.push({
+          product: {
+            name: cp.product.name,
+            description: cp.product.description,
+            imageUrl1: cp.product.imageUrl1,
+            imageUrl2: cp.product.imageUrl2,
+          },
           idea: idea.description,
           stylePrompt: cs.style.prompt,
         });
       }
     }
+  }
 
-    const tasks: { idea: string; stylePrompt: string }[] = [];
-    for (let i = 0; i < campaign.adCount; i++) {
-      tasks.push(combos[i % combos.length]);
-    }
+  // Cycle through combos up to adCount
+  const tasks: Combo[] = [];
+  for (let i = 0; i < campaign.adCount; i++) {
+    tasks.push(combos[i % combos.length]);
+  }
 
-    console.log(`[generate] ${ideas.length} ideas, ${styles.length} styles, ${combos.length} combos, ${tasks.length} tasks`);
-    tasks.forEach((t, i) => console.log(`[generate] task ${i}: idea="${t.idea.slice(0, 60)}..."`));
+  console.log(
+    `[generate] ${products.length} products, ${ideas.length} ideas, ${styles.length} styles, ${combos.length} combos, ${tasks.length} tasks`
+  );
 
-    // Step 1: For each task, call text LLM to produce image prompt JSON
-    const textPromises = tasks.map(async (task, taskIndex) => {
-      const systemPrompt = `You are an expert advertising creative director. Given a style guide, product information, campaign idea, and targeting data, produce a JSON object with exactly these keys: "prompt" (a detailed text-to-image prompt for FLUX), "negative_prompt" (what to avoid), "aspect_ratio" (e.g. "1:1"). Respond with ONLY the JSON, no explanation.`;
-
-      const userPrompt = [
-        "## Style Guide",
-        task.stylePrompt,
-        "",
-        "## Products",
-        productInfo,
-        "",
-        "## Campaign Idea",
-        task.idea,
-        "",
-        "## Targeting",
-        targetingContext,
-        "",
-        "Produce the JSON prompt for image generation:",
-      ].join("\n");
-
-      const output = await replicate.run(TEXT_MODEL, {
-        input: {
-          prompt: `${systemPrompt}\n\n${userPrompt}`,
-          max_tokens: 512,
-          temperature: 0.7,
-        },
-      });
-
-      // replicate.run for text models returns an array of string tokens
-      const text = Array.isArray(output) ? output.join("") : String(output);
-
-      console.log(`[generate] task ${taskIndex} LLM response:`, text.slice(0, 200));
-
-      // Parse JSON from the response
-      try {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          console.log(`[generate] task ${taskIndex} prompt:`, parsed.prompt?.slice(0, 100));
-          return parsed;
-        }
-      } catch {
-        // fall through to fallback
+  // Stream results via SSE
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      function send(data: object) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       }
 
-      // Fallback: use raw text as prompt
-      return { prompt: text, negative_prompt: "", aspect_ratio: "1:1" };
-    });
+      send({ type: "start", total: tasks.length });
 
-    const promptResults = await Promise.all(textPromises);
+      for (let i = 0; i < tasks.length; i++) {
+        const task = tasks[i];
+        try {
+          // Collect product image URLs (must be absolute for Replicate)
+          const productImages = [await toReplicateImage(task.product.imageUrl1)];
+          if (task.product.imageUrl2) {
+            productImages.push(await toReplicateImage(task.product.imageUrl2));
+          }
 
-    // Step 2: Send each prompt to FLUX for image generation
-    const predictions = await Promise.all(
-      promptResults.map((result) =>
-        replicate.predictions.create({
-          version:
-            "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc",
-          input: {
-            prompt: result.prompt,
-            width: 1024,
-            height: 1024,
-            num_outputs: 1,
-          },
-        })
-      )
-    );
+          console.log(`[generate] task ${i}: product="${task.product.name}", images=[${productImages.map(u => u.slice(0, 80)).join(", ")}]`); // DEBUG
+          console.log(`[generate] task ${i}: idea="${task.idea.slice(0, 80)}"`); // DEBUG
+          console.log(`[generate] task ${i}: style="${task.stylePrompt.slice(0, 80)}"`); // DEBUG
 
-    // Step 3: Save pending image records
-    const pendingImages = await prisma.$transaction(
-      predictions.map((prediction) =>
-        prisma.generatedImage.create({
-          data: {
-            campaignId: id,
-            imageUrl: "",
-            replicatePredictionId: prediction.id,
-            status: "pending",
-          },
-        })
-      )
-    );
+          // Step 1: Gemini 3 Flash — generate image prompt JSON
+          const geminiPrompt = [
+            "You are an expert advertising creative director.",
+            "Given the product images, product details, a campaign idea, and a style guide below,",
+            "produce a JSON object describing a compelling ad image.",
+            "",
+            "The JSON must have these keys:",
+            '- "prompt": a detailed text-to-image prompt combining all visual details',
+            '- "visual_composition": layout and composition description',
+            '- "colors": color palette',
+            '- "text_overlays": any text that should appear on the image',
+            '- "mood": emotional tone',
+            '- "lighting": lighting style',
+            '- "product_placement": how and where the product should appear',
+            "",
+            "Respond with ONLY valid JSON. No markdown formatting, no explanation.",
+            "",
+            "## Product",
+            `Title: ${task.product.name}`,
+            `Description: ${task.product.description}`,
+            "",
+            "## Style Guide",
+            task.stylePrompt,
+            "",
+            "## Campaign Idea",
+            task.idea,
+            "",
+            "Generate the creative direction JSON:",
+          ].join("\n");
 
-    return NextResponse.json({
-      campaign: campaign.name,
-      images: pendingImages,
-    });
-  } catch (error) {
-    console.error("Failed to generate images:", error);
-    return NextResponse.json(
-      { error: "Failed to generate images" },
-      { status: 500 }
-    );
-  }
+          const geminiInput = { // DEBUG
+            prompt: geminiPrompt,
+            images: productImages,
+            temperature: 0.7,
+            thinking_level: "low",
+            max_output_tokens: 2048,
+          };
+          console.log(`[generate] task ${i}: calling Gemini Flash, prompt length=${geminiInput.prompt.length}, images=${geminiInput.images.length}`); // DEBUG
+
+          const textOutput = await replicate.run(TEXT_MODEL, {
+            input: geminiInput,
+          });
+
+          // Parse text output
+          const rawText = typeof textOutput === "string"
+            ? textOutput
+            : Array.isArray(textOutput)
+              ? textOutput.join("")
+              : String(textOutput);
+
+          console.log(`[generate] task ${i} Gemini response:`, rawText);
+
+          let imagePrompt = rawText;
+          try {
+            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              imagePrompt = parsed.prompt || rawText;
+            }
+          } catch {
+            // Use raw text as fallback prompt
+          }
+
+          // Step 2: nano-banana — generate image
+          console.log(`[generate] task ${i}: calling nano-banana...`);
+
+          const imageOutput = await replicate.run(IMAGE_MODEL, {
+            input: {
+              prompt: imagePrompt,
+              image_input: productImages,
+              aspect_ratio: "match_input_image",
+              output_format: "jpg",
+            },
+          });
+
+          // Extract URL from output
+          // Replicate SDK returns FileOutput objects that have a url() method
+          console.log(`[generate] task ${i}: nano-banana raw output type=${typeof imageOutput}, isArray=${Array.isArray(imageOutput)}`); // DEBUG
+          let outputUrl = "";
+          function extractUrl(val: unknown): string {
+            if (typeof val === "string") return val;
+            if (val && typeof val === "object") {
+              // FileOutput has a url() method that returns a URL object
+              if ("url" in val && typeof (val as Record<string, unknown>).url === "function") {
+                return String((val as { url: () => unknown }).url());
+              }
+              // Or it might have a url property
+              if ("url" in val && typeof (val as Record<string, unknown>).url === "string") {
+                return (val as { url: string }).url;
+              }
+              // Or href
+              if ("href" in val && typeof (val as Record<string, unknown>).href === "string") {
+                return (val as { href: string }).href;
+              }
+            }
+            return String(val);
+          }
+
+          if (Array.isArray(imageOutput) && imageOutput.length > 0) {
+            outputUrl = extractUrl(imageOutput[0]);
+          } else {
+            outputUrl = extractUrl(imageOutput);
+          }
+
+          console.log(`[generate] task ${i}: extracted outputUrl=${outputUrl.slice(0, 100)}`); // DEBUG
+
+          if (!outputUrl || outputUrl === "undefined" || outputUrl === "null") {
+            throw new Error("No image URL in model output");
+          }
+
+          // Step 3: Download and store image
+          console.log(`[generate] task ${i}: storing image...`);
+          const storedUrl = await downloadAndStoreImage(outputUrl, ".jpg");
+
+          // Step 4: Save to database
+          const savedImage = await prisma.generatedImage.create({
+            data: {
+              campaignId: id,
+              imageUrl: storedUrl,
+              status: "completed",
+            },
+          });
+
+          console.log(`[generate] task ${i}: done — ${savedImage.id}`);
+          send({ type: "image", index: i, image: savedImage });
+        } catch (error) {
+          console.error(`[generate] task ${i} failed:`, error);
+
+          // Save failed record
+          const failedImage = await prisma.generatedImage.create({
+            data: {
+              campaignId: id,
+              imageUrl: "",
+              status: "failed",
+            },
+          });
+
+          send({ type: "error", index: i, image: failedImage, error: String(error) });
+        }
+      }
+
+      send({ type: "done" });
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }
