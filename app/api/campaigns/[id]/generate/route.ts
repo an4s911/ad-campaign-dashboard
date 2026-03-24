@@ -12,6 +12,10 @@ const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 const TEXT_MODEL = "google/gemini-3-flash";
 const IMAGE_MODEL = "google/nano-banana";
 
+/** Module-level cache: local file path → { url, expiry }. Replicate files expire after 24h. */
+const REPLICATE_FILE_TTL = 23 * 60 * 60 * 1000; // 23 hours (1h safety margin)
+const replicateFileCache = new Map<string, { url: string; expiresAt: number }>();
+
 interface Combo {
   product: {
     name: string;
@@ -36,6 +40,13 @@ async function toReplicateImage(url: string): Promise<string> {
   // Local path — upload to Replicate's file hosting so models can access it
   const localPath = url.startsWith("/") ? url : `/${url}`;
   const filePath = path.join(process.cwd(), "public", localPath);
+
+  const cached = replicateFileCache.get(filePath);
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log(`[generate] cache hit for ${filePath}`);
+    return cached.url;
+  }
+
   console.log(`[generate] uploading local file to Replicate: ${filePath}`); // DEBUG
   const buffer = await readFile(filePath);
   const ext = path.extname(filePath).toLowerCase();
@@ -49,6 +60,7 @@ async function toReplicateImage(url: string): Promise<string> {
 
   const fileUrl = (file as { urls?: { get?: string } }).urls?.get ?? "";
   console.log(`[generate] uploaded to Replicate: ${fileUrl.slice(0, 100)}`); // DEBUG
+  replicateFileCache.set(filePath, { url: fileUrl, expiresAt: Date.now() + REPLICATE_FILE_TTL });
   return fileUrl;
 }
 
