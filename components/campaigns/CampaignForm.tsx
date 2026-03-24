@@ -342,22 +342,16 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     setGenerateTotal(0);
     setGenerateDone(0);
 
-    console.log("[handleGenerate] starting SSE fetch to", `/api/campaigns/${targetId}/generate`); // DEBUG
-
     try {
       // This endpoint does not return a single JSON payload. It keeps the
       // request open and streams SSE messages as each image finishes or fails.
       const response = await fetch(`/api/campaigns/${targetId}/generate`, { method: "POST" });
-
-      console.log("[handleGenerate] response status:", response.status, response.statusText); // DEBUG
-      console.log("[handleGenerate] content-type:", response.headers.get("content-type")); // DEBUG
 
       if (!response.ok) {
         // Early validation/loading failures come back as a normal JSON error
         // response instead of an SSE stream.
         try {
           const data = await response.json();
-          console.log("[handleGenerate] error response body:", data); // DEBUG
           showToast(data.error || "Generation failed", "error");
         } catch {
           showToast("Generation failed", "error");
@@ -367,7 +361,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
 
       const reader = response.body?.getReader();
       if (!reader) {
-        console.log("[handleGenerate] no reader available on response body"); // DEBUG
         showToast("Streaming not supported", "error");
         return;
       }
@@ -378,12 +371,10 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-          console.log("[handleGenerate] SSE stream ended"); // DEBUG
           break;
         }
 
         const chunk = decoder.decode(value, { stream: true });
-        console.log("[handleGenerate] SSE chunk received:", chunk.slice(0, 200)); // DEBUG
         buffer += chunk;
         // SSE messages are separated by a blank line. Network chunks do not
         // necessarily line up with message boundaries, so keep any incomplete
@@ -398,7 +389,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
             // The backend sends JSON inside each SSE `data:` line. The event
             // types come from app/api/campaigns/[id]/generate/route.ts.
             const event = JSON.parse(line.slice(6));
-            console.log("[handleGenerate] SSE event:", event.type, event); // DEBUG
             if (event.type === "start") {
               // First event announces how many generation tasks the backend
               // queued, so the UI can initialize progress.
@@ -410,7 +400,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
               setGeneratedImages((prev) => [...prev, event.image]);
               setGenerateDone((prev) => prev + 1);
             } else if (event.type === "error") {
-              console.error("[handleGenerate] generation error for index", event.index, ":", event.error); // DEBUG
               // Failed tasks still increment progress so the progress bar
               // reaches completion even when some images fail.
               if (event.image) {
@@ -418,13 +407,11 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
               }
               setGenerateDone((prev) => prev + 1);
             }
-          } catch (parseErr) {
-            console.error("[handleGenerate] SSE parse error:", parseErr, "raw:", line.slice(0, 200)); // DEBUG
+          } catch {
           }
         }
       }
-    } catch (err) {
-      console.error("[handleGenerate] fetch error:", err); // DEBUG
+    } catch {
       showToast("Failed to start generation", "error");
     } finally {
       setGenerating(false);

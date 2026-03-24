@@ -47,7 +47,6 @@ async function toReplicateImage(url: string): Promise<string> {
     return cached.url;
   }
 
-  console.log(`[generate] uploading local file to Replicate: ${filePath}`); // DEBUG
   const buffer = await readFile(filePath);
   const ext = path.extname(filePath).toLowerCase();
   const mimeType = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : ext === ".gif" ? "image/gif" : "image/jpeg";
@@ -59,7 +58,6 @@ async function toReplicateImage(url: string): Promise<string> {
   );
 
   const fileUrl = (file as { urls?: { get?: string } }).urls?.get ?? "";
-  console.log(`[generate] uploaded to Replicate: ${fileUrl.slice(0, 100)}`); // DEBUG
   replicateFileCache.set(filePath, { url: fileUrl, expiresAt: Date.now() + REPLICATE_FILE_TTL });
   return fileUrl;
 }
@@ -148,10 +146,6 @@ export async function POST(
             productImages.push(await toReplicateImage(task.product.imageUrl2));
           }
 
-          console.log(`[generate] task ${i}: product="${task.product.name}", images=[${productImages.map(u => u.slice(0, 80)).join(", ")}]`); // DEBUG
-          console.log(`[generate] task ${i}: idea="${task.idea.slice(0, 80)}"`); // DEBUG
-          console.log(`[generate] task ${i}: style="${task.stylePrompt.slice(0, 80)}"`); // DEBUG
-
           // Step 1: Gemini 3 Flash — generate image prompt JSON
           const geminiPrompt = [
             "You are an expert advertising creative director.",
@@ -182,14 +176,13 @@ export async function POST(
             "Generate the creative direction JSON:",
           ].join("\n");
 
-          const geminiInput = { // DEBUG
+          const geminiInput = {
             prompt: geminiPrompt,
             images: productImages,
             temperature: 0.7,
             thinking_level: "low",
             max_output_tokens: 2048,
           };
-          console.log(`[generate] task ${i}: calling Gemini Flash, prompt length=${geminiInput.prompt.length}, images=${geminiInput.images.length}`); // DEBUG
 
           const textOutput = await replicate.run(TEXT_MODEL, {
             input: geminiInput,
@@ -229,7 +222,6 @@ export async function POST(
 
           // Extract URL from output
           // Replicate SDK returns FileOutput objects that have a url() method
-          console.log(`[generate] task ${i}: nano-banana raw output type=${typeof imageOutput}, isArray=${Array.isArray(imageOutput)}`); // DEBUG
           let outputUrl = "";
           function extractUrl(val: unknown): string {
             if (typeof val === "string") return val;
@@ -255,8 +247,6 @@ export async function POST(
           } else {
             outputUrl = extractUrl(imageOutput);
           }
-
-          console.log(`[generate] task ${i}: extracted outputUrl=${outputUrl.slice(0, 100)}`); // DEBUG
 
           if (!outputUrl || outputUrl === "undefined" || outputUrl === "null") {
             throw new Error("No image URL in model output");
