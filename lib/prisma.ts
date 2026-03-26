@@ -8,6 +8,7 @@ function createPrismaClient() {
   const isProduction = process.env.NODE_ENV === "production";
   const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL!,
+    max: isProduction ? 2 : 10,
     ssl: isProduction ? { rejectUnauthorized: false } : undefined,
   });
 
