@@ -172,6 +172,8 @@ export async function POST(
             max_output_tokens: 2048,
           };
 
+          console.log(`[generate] task ${i}: calling gemini...`, geminiInput);
+
           const textOutput = await replicate.run(TEXT_MODEL, {
             input: geminiInput,
           });
