@@ -10,7 +10,7 @@ export const maxDuration = 300;
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
 const TEXT_MODEL = "google/gemini-3-flash";
-const IMAGE_MODEL = "google/nano-banana";
+const IMAGE_MODEL = "google/nano-banana-pro";
 
 /** Module-level cache: local file path → { url, expiry }. Replicate files expire after 24h. */
 const REPLICATE_FILE_TTL = 23 * 60 * 60 * 1000; // 23 hours (1h safety margin)
@@ -148,30 +148,18 @@ export async function POST(
 
           // Step 1: Gemini 3 Flash — generate image prompt JSON
           const geminiPrompt = [
-            "You are an expert advertising creative director.",
-            "Given the product images, product details, a campaign idea, and a style guide below,",
-            "produce a JSON object describing a compelling ad image.",
-            "",
-            "The JSON must have these keys:",
-            '- "prompt": a detailed text-to-image prompt combining all visual details',
-            '- "visual_composition": layout and composition description',
-            '- "colors": color palette',
-            '- "text_overlays": any text that should appear on the image',
-            '- "mood": emotional tone',
-            '- "lighting": lighting style',
-            '- "product_placement": how and where the product should appear',
-            "",
-            "Respond with ONLY valid JSON. No markdown formatting, no explanation.",
+            "## Style Guide",
+            task.stylePrompt,
             "",
             "## Product",
             `Title: ${task.product.name}`,
             `Description: ${task.product.description}`,
             "",
-            "## Style Guide",
-            task.stylePrompt,
-            "",
             "## Campaign Idea",
             task.idea,
+            "",            "## Product",
+            `Title: ${task.product.name}`,
+            `Description: ${task.product.description}`,
             "",
             "Generate the creative direction JSON:",
           ].join("\n");
