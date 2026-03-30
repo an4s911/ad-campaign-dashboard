@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
@@ -11,8 +10,6 @@ import ImageDropzone from "@/components/ui/ImageDropzone";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GENERATED_STYLE_STORAGE_KEY } from "@/components/styles/GenerateStyleFromImageModal";
-
-const passthroughImageLoader = ({ src }: { src: string }) => src;
 
 export default function NewStylePage() {
   const router = useRouter();
@@ -123,7 +120,7 @@ export default function NewStylePage() {
         </div>
       )}
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className={`grid gap-5 ${showPreview ? "xl:grid-cols-2" : "xl:grid-cols-1"}`}>
         <div className="rounded-2xl border border-border bg-card p-6">
           <div className="mb-4 space-y-2">
             <Label htmlFor="style-name">Style Name</Label>
@@ -137,13 +134,15 @@ export default function NewStylePage() {
 
           <div className="mb-4 space-y-2">
             <Label>Preview Image</Label>
-            <ImageDropzone
-              imageUrl={previewImageUrl}
-              onImageUploaded={setPreviewImageUrl}
-              onImageRemoved={() => setPreviewImageUrl(null)}
-              aspectRatioClassName="aspect-[16/10]"
-              previewAlt="Style preview image"
-            />
+            <div className="max-w-2xl">
+              <ImageDropzone
+                imageUrl={previewImageUrl}
+                onImageUploaded={setPreviewImageUrl}
+                onImageRemoved={() => setPreviewImageUrl(null)}
+                aspectRatioClassName="aspect-[16/10]"
+                previewAlt="Style preview image"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -167,31 +166,18 @@ export default function NewStylePage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-card-foreground">Preview</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Review the rendered markdown before saving.
-              </p>
+        {showPreview && (
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-card-foreground">Preview</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Review the rendered markdown before saving.
+                </p>
+              </div>
             </div>
-          </div>
 
-          {showPreview ? (
             <div className="markdown-prose prose prose-sm min-h-140 max-w-none overflow-y-auto rounded-xl border border-border bg-muted p-5">
-              {previewImageUrl ? (
-                <div className="not-prose relative mb-5 aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-background">
-                  <Image
-                    src={previewImageUrl}
-                    alt="Style preview"
-                    fill
-                    sizes="(max-width: 1280px) 100vw, 600px"
-                    loader={passthroughImageLoader}
-                    unoptimized
-                    className="object-cover"
-                  />
-                </div>
-              ) : null}
               {prompt.trim() ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {prompt}
@@ -202,12 +188,8 @@ export default function NewStylePage() {
                 </p>
               )}
             </div>
-          ) : (
-            <div className="flex min-h-140 items-center justify-center rounded-xl border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-              Click <span className="mx-1 font-medium text-foreground">Preview Markdown</span> to render the style guide without saving.
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

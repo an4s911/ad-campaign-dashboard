@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
@@ -17,8 +16,6 @@ interface Style {
   prompt: string;
   previewImageUrl?: string | null;
 }
-
-const passthroughImageLoader = ({ src }: { src: string }) => src;
 
 export default function EditStylePage({
   params,
@@ -165,13 +162,15 @@ export default function EditStylePage({
 
           <div className="mb-4 space-y-2">
             <Label>Preview Image</Label>
-            <ImageDropzone
-              imageUrl={previewImageUrl}
-              onImageUploaded={setPreviewImageUrl}
-              onImageRemoved={() => setPreviewImageUrl(null)}
-              aspectRatioClassName="aspect-[16/10]"
-              previewAlt="Style preview image"
-            />
+            <div className="max-w-2xl">
+              <ImageDropzone
+                imageUrl={previewImageUrl}
+                onImageUploaded={setPreviewImageUrl}
+                onImageRemoved={() => setPreviewImageUrl(null)}
+                aspectRatioClassName="aspect-[16/10]"
+                previewAlt="Style preview image"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -205,19 +204,6 @@ export default function EditStylePage({
             </div>
 
             <div className="markdown-prose prose prose-sm min-h-140 max-w-none overflow-y-auto rounded-xl border border-border bg-muted p-5">
-              {previewImageUrl ? (
-                <div className="not-prose relative mb-5 aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-background">
-                  <Image
-                    src={previewImageUrl}
-                    alt="Style preview"
-                    fill
-                    sizes="(max-width: 1280px) 100vw, 600px"
-                    loader={passthroughImageLoader}
-                    unoptimized
-                    className="object-cover"
-                  />
-                </div>
-              ) : null}
               {prompt.trim() ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {prompt}
