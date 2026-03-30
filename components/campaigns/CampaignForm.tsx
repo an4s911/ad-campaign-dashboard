@@ -1346,7 +1346,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
               </p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {generatedImages.map((img) => (
-                  <div key={img.id} className="group relative overflow-hidden rounded-2xl border border-border bg-muted shadow-card">
+                  <div key={img.id} className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-muted shadow-card">
                     {img.status === "completed" ? (
                       <>
                         <div 
@@ -1375,7 +1375,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                         </button>
                       </>
                     ) : img.status === "pending" ? (
-                      <div className="flex aspect-square items-center justify-center">
+                      <div className="flex h-full items-center justify-center">
                         <div className="flex flex-col items-center gap-2">
                           <svg className="h-6 w-6 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -1386,7 +1386,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                       </div>
                     ) : (
                       <>
-                        <div className="flex aspect-square items-center justify-center">
+                        <div className="flex h-full items-center justify-center">
                           <div className="flex flex-col items-center gap-2">
                             <svg className="h-6 w-6 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
@@ -1406,7 +1406,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                         </button>
                       </>
                     )}
-                    <div className="relative aspect-square" />
                   </div>
                 ))}
               </div>

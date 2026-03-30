@@ -14,13 +14,13 @@ export default async function DashboardLayout({
   const usingDefaultPassword = isUsingBootstrapPassword(session);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-dvh overflow-hidden overscroll-none bg-background">
       <Sidebar
         userName={session.fullName}
         usingDefaultPassword={usingDefaultPassword}
         userRole={session.role}
       />
-      <main className="flex-1 overflow-y-auto">
+      <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="mx-auto max-w-6xl px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-8">
           {usingDefaultPassword && (
             <div className="mb-6 animate-slide-down rounded-xl border border-warning/20 bg-warning/8 px-4 py-3 text-sm flex items-center gap-3">
