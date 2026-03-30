@@ -10,6 +10,7 @@ import StyleCard from "@/components/styles/StyleCard";
 import StylePreviewModal, { StylePreviewData } from "@/components/styles/StylePreviewModal";
 import ImageDropzone from "@/components/ui/ImageDropzone";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
+import { useUnsavedChangesGuard } from "@/providers/UnsavedChangesProvider";
 
 interface Product {
   id: string;
@@ -92,9 +93,32 @@ const TAG_TO_CATEGORY: Record<string, string> = {
 const POLL_INTERVAL = 3000;
 const passthroughImageLoader = ({ src }: { src: string }) => src;
 
+function getCampaignSnapshot(values: {
+  name: string;
+  adCount: number;
+  selectedProductIds: string[];
+  storeCategories: string[];
+  ageMin: string;
+  ageMax: string;
+  gender: string[];
+  productTags: string[];
+  incomeLevel: string[];
+  shoppingBehavior: string[];
+  targetDays: string[];
+  timeOfDay: string[];
+  weather: string[];
+  targetLocations: TargetLocation[];
+  ideas: string[];
+  selectedStyleIds: string[];
+  uploadedStyleReferenceUrls: string[];
+}) {
+  return JSON.stringify(values);
+}
+
 export default function CampaignForm({ campaignId }: CampaignFormProps) {
   const router = useRouter();
   const isEditing = !!campaignId;
+  const [loadingCampaign, setLoadingCampaign] = useState(isEditing);
   const [name, setName] = useState("");
   const [adCount, setAdCount] = useState(10);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -132,6 +156,27 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   const [toastVisible, setToastVisible] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [initialSnapshot, setInitialSnapshot] = useState(() =>
+    getCampaignSnapshot({
+      name: "",
+      adCount: 10,
+      selectedProductIds: [],
+      storeCategories: [],
+      ageMin: "",
+      ageMax: "",
+      gender: [],
+      productTags: [],
+      incomeLevel: [],
+      shoppingBehavior: [],
+      targetDays: ALL_DAY_VALUES,
+      timeOfDay: ["All Day"],
+      weather: ["Any"],
+      targetLocations: [],
+      ideas: [""],
+      selectedStyleIds: [],
+      uploadedStyleReferenceUrls: [],
+    })
+  );
 
   function showToast(message: string, type: "error" | "success") {
     setToast({ message, type });
@@ -185,6 +230,51 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     () => selectedStyleIds.length + uploadedStyleReferences.length,
     [selectedStyleIds.length, uploadedStyleReferences.length]
   );
+  const currentSnapshot = useMemo(
+    () =>
+      getCampaignSnapshot({
+        name,
+        adCount,
+        selectedProductIds,
+        storeCategories,
+        ageMin,
+        ageMax,
+        gender,
+        productTags,
+        incomeLevel,
+        shoppingBehavior,
+        targetDays,
+        timeOfDay,
+        weather,
+        targetLocations,
+        ideas,
+        selectedStyleIds,
+        uploadedStyleReferenceUrls: uploadedStyleReferences.map(
+          (style) => style.uploadedImageUrl
+        ),
+      }),
+    [
+      name,
+      adCount,
+      selectedProductIds,
+      storeCategories,
+      ageMin,
+      ageMax,
+      gender,
+      productTags,
+      incomeLevel,
+      shoppingBehavior,
+      targetDays,
+      timeOfDay,
+      weather,
+      targetLocations,
+      ideas,
+      selectedStyleIds,
+      uploadedStyleReferences,
+    ]
+  );
+  const { clearUnsavedChanges, allowNavigation, guardedPush } =
+    useUnsavedChangesGuard(!loadingCampaign && currentSnapshot !== initialSnapshot);
 
   // Real-time validation for generate button
   const canGenerate = useMemo(() => {
@@ -240,17 +330,51 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   }, [fetchProducts, fetchStyles]);
 
   useEffect(() => {
-    if (!campaignId) return;
+    if (!campaignId) {
+      setLoadingCampaign(false);
+      return;
+    }
+
     (async () => {
       try {
         const res = await fetch(`/api/campaigns/${campaignId}`);
         if (!res.ok) return;
         const data = await res.json();
+        const nextSelectedProductIds = data.products.map(
+          (cp: { productId: string }) => cp.productId
+        );
+        const nextIdeas =
+          data.ideas.length > 0
+            ? data.ideas.map((i: { description: string }) => i.description)
+            : [""];
+        const nextSelectedStyleIds = data.styles
+          .filter(
+            (cs: { styleType?: string; styleId?: string | null }) =>
+              cs.styleType !== "uploaded" && Boolean(cs.styleId)
+          )
+          .map((cs: { styleId: string }) => cs.styleId);
+        const nextUploadedReferences = data.styles
+          .filter(
+            (cs: {
+              id: string;
+              styleType?: string;
+              uploadedImageUrl?: string | null;
+            }) => cs.styleType === "uploaded" && Boolean(cs.uploadedImageUrl)
+          )
+          .map(
+            (cs: {
+              id: string;
+              uploadedImageUrl: string;
+            }) => ({
+              id: cs.id,
+              styleType: "uploaded" as const,
+              uploadedImageUrl: cs.uploadedImageUrl,
+            })
+          );
+
         setName(data.name);
         setAdCount(data.adCount);
-        setSelectedProductIds(
-          data.products.map((cp: { productId: string }) => cp.productId)
-        );
+        setSelectedProductIds(nextSelectedProductIds);
         setStoreCategories(data.targetStoreCategories ?? []);
         setAgeMin(data.targetAgeMin != null ? String(data.targetAgeMin) : "");
         setAgeMax(data.targetAgeMax != null ? String(data.targetAgeMax) : "");
@@ -263,42 +387,40 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         setTimeOfDay(data.targetTimeOfDay ?? ["All Day"]);
         setWeather(data.targetWeather ?? ["Any"]);
         setTargetLocations(data.targetLocations ?? []);
-        setIdeas(
-          data.ideas.length > 0
-            ? data.ideas.map((i: { description: string }) => i.description)
-            : [""]
-        );
-        setSelectedStyleIds(
-          data.styles
-            .filter((cs: { styleType?: string; styleId?: string | null }) => cs.styleType !== "uploaded" && Boolean(cs.styleId))
-            .map((cs: { styleId: string }) => cs.styleId)
-        );
-        setUploadedStyleReferences(
-          data.styles
-            .filter(
-              (cs: {
-                id: string;
-                styleType?: string;
-                uploadedImageUrl?: string | null;
-              }) => cs.styleType === "uploaded" && Boolean(cs.uploadedImageUrl)
-            )
-            .map(
-              (cs: {
-                id: string;
-                uploadedImageUrl: string;
-              }) => ({
-                id: cs.id,
-                styleType: "uploaded",
-                uploadedImageUrl: cs.uploadedImageUrl,
-              })
-            )
-        );
+        setIdeas(nextIdeas);
+        setSelectedStyleIds(nextSelectedStyleIds);
+        setUploadedStyleReferences(nextUploadedReferences);
         setCampaignStatus(data.status ?? "draft");
         if (data.generatedImages?.length > 0) {
           setGeneratedImages(data.generatedImages);
         }
+        setInitialSnapshot(
+          getCampaignSnapshot({
+            name: data.name,
+            adCount: data.adCount,
+            selectedProductIds: nextSelectedProductIds,
+            storeCategories: data.targetStoreCategories ?? [],
+            ageMin: data.targetAgeMin != null ? String(data.targetAgeMin) : "",
+            ageMax: data.targetAgeMax != null ? String(data.targetAgeMax) : "",
+            gender: data.targetGender ?? [],
+            productTags: data.targetProductTags ?? [],
+            incomeLevel: data.targetIncome ?? [],
+            shoppingBehavior: data.targetShoppingBehavior ?? [],
+            targetDays: data.targetDays ?? ALL_DAY_VALUES,
+            timeOfDay: data.targetTimeOfDay ?? ["All Day"],
+            weather: data.targetWeather ?? ["Any"],
+            targetLocations: data.targetLocations ?? [],
+            ideas: nextIdeas,
+            selectedStyleIds: nextSelectedStyleIds,
+            uploadedStyleReferenceUrls: nextUploadedReferences.map(
+              (style: UploadedStyleReference) => style.uploadedImageUrl
+            ),
+          })
+        );
       } catch {
         showToast("Failed to load campaign", "error");
+      } finally {
+        setLoadingCampaign(false);
       }
     })();
   }, [campaignId]);
@@ -386,6 +508,29 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     ];
   }
 
+  function buildPayload(status?: "draft" | "active") {
+    return {
+      name: name.trim(),
+      adCount,
+      targetStoreCategories: storeCategories,
+      targetAgeMin: ageMin ? Number(ageMin) : null,
+      targetAgeMax: ageMax ? Number(ageMax) : null,
+      targetGender: gender,
+      targetTags: [],
+      targetProductTags: productTags,
+      targetIncome: incomeLevel,
+      targetShoppingBehavior: shoppingBehavior,
+      targetDays,
+      targetTimeOfDay: timeOfDay,
+      targetWeather: weather,
+      targetLocations,
+      productIds: selectedProductIds,
+      ideas: buildIdeas(),
+      styles: buildStyles(),
+      ...(status === "active" ? { status: "active" } : {}),
+    };
+  }
+
   // Handle adCount changes with auto-deselection logic
   function handleAdCountChange(newValue: number) {
     const clamped = Math.max(1, newValue);
@@ -431,38 +576,25 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
 
     setSaving(true);
     try {
-      const payload = {
-        name: name.trim(),
-        adCount,
-        targetStoreCategories: storeCategories,
-        targetAgeMin: ageMin ? Number(ageMin) : null,
-        targetAgeMax: ageMax ? Number(ageMax) : null,
-        targetGender: gender,
-        targetTags: [],
-        targetProductTags: productTags,
-        targetIncome: incomeLevel,
-        targetShoppingBehavior: shoppingBehavior,
-        targetDays,
-        targetTimeOfDay: timeOfDay,
-        targetWeather: weather,
-        targetLocations,
-        productIds: selectedProductIds,
-        ideas: buildIdeas(),
-        styles: buildStyles(),
-        ...(status === "active" && { status: "active" }),
-      };
-
       const res = await fetch(savedCampaignId ? `/api/campaigns/${savedCampaignId}` : "/api/campaigns", {
         method: savedCampaignId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(buildPayload(status)),
       });
 
       const data = await res.json();
       if (res.ok) {
         if (!savedCampaignId) setSavedCampaignId(data.id);
+        setInitialSnapshot(currentSnapshot);
         showToast(savedCampaignId ? "Campaign updated" : "Campaign saved as draft", "success");
-        if (status === "active") router.push("/campaign");
+        if (status === "active") {
+          allowNavigation(() => {
+            router.push("/campaign");
+          });
+          return;
+        }
+
+        clearUnsavedChanges();
       } else {
         showToast(data.error || "Failed to save", "error");
       }
@@ -478,41 +610,27 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
 
     // Generation is tied to a persisted campaign id because the backend stores
     // each generated image against that campaign while it streams progress back.
-    // If the user is working on a new draft, save it first.
+    // Save first whenever the form is not fully persisted yet.
     let targetId = savedCampaignId;
-    if (!targetId) {
+    const needsSave = !targetId || currentSnapshot !== initialSnapshot;
+
+    if (needsSave) {
       setSaving(true);
       try {
-        const res = await fetch("/api/campaigns", {
-          method: "POST",
+        const res = await fetch(targetId ? `/api/campaigns/${targetId}` : "/api/campaigns", {
+          method: targetId ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: name.trim(),
-            adCount,
-            targetStoreCategories: storeCategories,
-            targetAgeMin: ageMin ? Number(ageMin) : null,
-            targetAgeMax: ageMax ? Number(ageMax) : null,
-            targetGender: gender,
-            targetTags: [],
-            targetProductTags: productTags,
-            targetIncome: incomeLevel,
-            targetShoppingBehavior: shoppingBehavior,
-            targetDays,
-            targetTimeOfDay: timeOfDay,
-            targetWeather: weather,
-            targetLocations,
-            productIds: selectedProductIds,
-            ideas: buildIdeas(),
-            styles: buildStyles(),
-          }),
+          body: JSON.stringify(buildPayload()),
         });
         const data = await res.json();
         if (!res.ok) {
           showToast(data.error || "Failed to save before generation", "error");
           return;
         }
-        targetId = data.id;
+        targetId = targetId ?? data.id;
         setSavedCampaignId(targetId);
+        setInitialSnapshot(currentSnapshot);
+        clearUnsavedChanges();
       } catch {
         showToast("Failed to save before generation", "error");
         return;
@@ -737,7 +855,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
 
       <div className="mb-8 flex items-center gap-4">
         <button
-          onClick={() => router.push("/campaign")}
+          onClick={() => guardedPush("/campaign")}
           aria-label="Go back"
           className="rounded-xl p-2 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
@@ -1415,7 +1533,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-border/50 pt-6">
             <button
               type="button"
-              onClick={() => router.push("/campaign")}
+              onClick={() => guardedPush("/campaign")}
               className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:bg-muted"
             >
               Cancel

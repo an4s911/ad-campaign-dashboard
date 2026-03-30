@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, FormEvent, use } from "react";
+import { useState, useEffect, FormEvent, use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/products/ImageUpload";
 import TagSection from "@/components/products/TagSection";
+import { useUnsavedChangesGuard } from "@/providers/UnsavedChangesProvider";
 
 interface Product {
   id: string;
@@ -13,6 +14,16 @@ interface Product {
   imageUrl2: string | null;
   isEnabled: boolean;
   tags: string[];
+}
+
+function getProductSnapshot(values: {
+  name: string;
+  description: string;
+  imageUrl1: string | null;
+  imageUrl2: string | null;
+  tags: string[];
+}) {
+  return JSON.stringify(values);
 }
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,6 +38,29 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [tags, setTags] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [initialSnapshot, setInitialSnapshot] = useState(() =>
+    getProductSnapshot({
+      name: "",
+      description: "",
+      imageUrl1: null,
+      imageUrl2: null,
+      tags: [],
+    })
+  );
+  const currentSnapshot = useMemo(
+    () =>
+      getProductSnapshot({
+        name,
+        description,
+        imageUrl1,
+        imageUrl2,
+        tags,
+      }),
+    [name, description, imageUrl1, imageUrl2, tags]
+  );
+  const { allowNavigation, guardedPush } = useUnsavedChangesGuard(
+    !loading && currentSnapshot !== initialSnapshot
+  );
 
   useEffect(() => {
     (async () => {
@@ -34,7 +68,9 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         const res = await fetch(`/api/products/${id}`);
         if (!res.ok) {
           alert("Product not found");
-          router.push("/product");
+          allowNavigation(() => {
+            router.push("/product");
+          });
           return;
         }
         const product: Product = await res.json();
@@ -44,14 +80,25 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         setImageUrl2(product.imageUrl2);
         setInitialTags(product.tags || []);
         setTags(product.tags || []);
+        setInitialSnapshot(
+          getProductSnapshot({
+            name: product.name,
+            description: product.description,
+            imageUrl1: product.imageUrl1,
+            imageUrl2: product.imageUrl2,
+            tags: product.tags || [],
+          })
+        );
       } catch {
         alert("Failed to load product");
-        router.push("/product");
+        allowNavigation(() => {
+          router.push("/product");
+        });
       } finally {
         setLoading(false);
       }
     })();
-  }, [id, router]);
+  }, [allowNavigation, id, router]);
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {};
@@ -81,7 +128,10 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       });
 
       if (res.ok) {
-        router.push("/product");
+        setInitialSnapshot(currentSnapshot);
+        allowNavigation(() => {
+          router.push("/product");
+        });
       } else {
         const data = await res.json();
         alert(data.error || "Failed to save product");
@@ -121,7 +171,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           <div className="flex items-center gap-4">
             <button
               type="button"
-              onClick={() => router.push("/product")}
+              onClick={() => guardedPush("/product")}
               className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -133,7 +183,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => router.push("/product")}
+              onClick={() => guardedPush("/product")}
               className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
               Cancel

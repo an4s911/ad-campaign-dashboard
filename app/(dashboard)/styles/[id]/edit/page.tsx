@@ -1,14 +1,23 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import StyleForm from "@/components/styles/StyleForm";
+import { useUnsavedChangesGuard } from "@/providers/UnsavedChangesProvider";
 
 interface Style {
   id: string;
   name: string;
   prompt: string;
   previewImageUrl?: string | null;
+}
+
+function getStyleSnapshot(values: {
+  name: string;
+  prompt: string;
+  previewImageUrl: string | null;
+}) {
+  return JSON.stringify(values);
 }
 
 export default function EditStylePage({
@@ -25,6 +34,25 @@ export default function EditStylePage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [initialSnapshot, setInitialSnapshot] = useState(() =>
+    getStyleSnapshot({
+      name: "",
+      prompt: "",
+      previewImageUrl: null,
+    })
+  );
+  const currentSnapshot = useMemo(
+    () =>
+      getStyleSnapshot({
+        name,
+        prompt,
+        previewImageUrl,
+      }),
+    [name, prompt, previewImageUrl]
+  );
+  const { allowNavigation } = useUnsavedChangesGuard(
+    !loading && currentSnapshot !== initialSnapshot
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +71,13 @@ export default function EditStylePage({
           setName(style.name);
           setPrompt(style.prompt);
           setPreviewImageUrl(style.previewImageUrl ?? null);
+          setInitialSnapshot(
+            getStyleSnapshot({
+              name: style.name,
+              prompt: style.prompt,
+              previewImageUrl: style.previewImageUrl ?? null,
+            })
+          );
         }
       } catch (fetchError) {
         if (!cancelled) {
@@ -92,8 +127,11 @@ export default function EditStylePage({
         return;
       }
 
-      router.push("/styles");
-      router.refresh();
+      setInitialSnapshot(currentSnapshot);
+      allowNavigation(() => {
+        router.push("/styles");
+        router.refresh();
+      });
     } catch {
       setError("Failed to update style");
     } finally {

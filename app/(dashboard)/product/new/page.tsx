@@ -1,9 +1,20 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useMemo, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/products/ImageUpload";
 import TagSection from "@/components/products/TagSection";
+import { useUnsavedChangesGuard } from "@/providers/UnsavedChangesProvider";
+
+function getProductSnapshot(values: {
+  name: string;
+  description: string;
+  imageUrl1: string | null;
+  imageUrl2: string | null;
+  tags: string[];
+}) {
+  return JSON.stringify(values);
+}
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -14,6 +25,27 @@ export default function NewProductPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const currentSnapshot = useMemo(
+    () =>
+      getProductSnapshot({
+        name,
+        description,
+        imageUrl1,
+        imageUrl2,
+        tags,
+      }),
+    [name, description, imageUrl1, imageUrl2, tags]
+  );
+  const { allowNavigation, guardedPush } = useUnsavedChangesGuard(
+    currentSnapshot !==
+      getProductSnapshot({
+        name: "",
+        description: "",
+        imageUrl1: null,
+        imageUrl2: null,
+        tags: [],
+      })
+  );
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {};
@@ -43,7 +75,9 @@ export default function NewProductPage() {
       });
 
       if (res.ok) {
-        router.push("/product");
+        allowNavigation(() => {
+          router.push("/product");
+        });
       } else {
         const data = await res.json();
         alert(data.error || "Failed to save product");
@@ -62,7 +96,7 @@ export default function NewProductPage() {
           <div className="flex items-center gap-4">
             <button
               type="button"
-              onClick={() => router.push("/product")}
+              onClick={() => guardedPush("/product")}
               className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -74,7 +108,7 @@ export default function NewProductPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => router.push("/product")}
+              onClick={() => guardedPush("/product")}
               className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
               Cancel

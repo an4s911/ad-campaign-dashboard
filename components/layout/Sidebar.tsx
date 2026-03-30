@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { useUnsavedChanges } from "@/providers/UnsavedChangesProvider";
 
 interface NavItem {
   href: string;
@@ -79,10 +80,17 @@ export default function Sidebar({
   const router = useRouter();
   const pathname = usePathname();
   const navItems = getNavItems(userRole);
+  const { confirmDiscardChanges, allowNavigation } = useUnsavedChanges();
 
   async function handleLogout() {
+    if (!confirmDiscardChanges()) {
+      return;
+    }
+
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
+    allowNavigation(() => {
+      router.push("/login");
+    });
   }
 
   return (

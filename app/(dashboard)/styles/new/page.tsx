@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import StyleForm from "@/components/styles/StyleForm";
 import { GENERATED_STYLE_STORAGE_KEY } from "@/components/styles/GenerateStyleFromImageModal";
+import { useUnsavedChangesGuard } from "@/providers/UnsavedChangesProvider";
+
+function getStyleSnapshot(values: {
+  name: string;
+  prompt: string;
+  previewImageUrl: string | null;
+}) {
+  return JSON.stringify(values);
+}
 
 export default function NewStylePage() {
   const router = useRouter();
@@ -14,6 +23,25 @@ export default function NewStylePage() {
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [initialSnapshot, setInitialSnapshot] = useState(() =>
+    getStyleSnapshot({
+      name: "",
+      prompt: "",
+      previewImageUrl: null,
+    })
+  );
+  const currentSnapshot = useMemo(
+    () =>
+      getStyleSnapshot({
+        name,
+        prompt,
+        previewImageUrl,
+      }),
+    [name, prompt, previewImageUrl]
+  );
+  const { allowNavigation } = useUnsavedChangesGuard(
+    currentSnapshot !== initialSnapshot
+  );
 
   useEffect(() => {
     if (searchParams.get("fromImage") !== "1") {
@@ -76,8 +104,11 @@ export default function NewStylePage() {
         return;
       }
 
-      router.push("/styles");
-      router.refresh();
+      setInitialSnapshot(currentSnapshot);
+      allowNavigation(() => {
+        router.push("/styles");
+        router.refresh();
+      });
     } catch {
       setError("Failed to create style");
     } finally {
