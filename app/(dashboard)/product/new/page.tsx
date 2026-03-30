@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/products/ImageUpload";
+import TagSection from "@/components/products/TagSection";
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -10,6 +11,7 @@ export default function NewProductPage() {
   const [description, setDescription] = useState("");
   const [imageUrl1, setImageUrl1] = useState<string | null>(null);
   const [imageUrl2, setImageUrl2] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -36,6 +38,7 @@ export default function NewProductPage() {
           description: description.trim(),
           imageUrl1,
           imageUrl2,
+          tags,
         }),
       });
 
@@ -130,6 +133,8 @@ export default function NewProductPage() {
               />
             </div>
           </div>
+
+          <TagSection imageUrls={[imageUrl1, imageUrl2]} onTagsChange={setTags} />
 
           <div className="flex justify-end gap-3 pt-2">
             <button

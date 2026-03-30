@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent, use } from "react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/products/ImageUpload";
+import TagSection from "@/components/products/TagSection";
 
 interface Product {
   id: string;
@@ -11,6 +12,7 @@ interface Product {
   imageUrl1: string;
   imageUrl2: string | null;
   isEnabled: boolean;
+  tags: string[];
 }
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
@@ -21,6 +23,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   const [description, setDescription] = useState("");
   const [imageUrl1, setImageUrl1] = useState<string | null>(null);
   const [imageUrl2, setImageUrl2] = useState<string | null>(null);
+  const [initialTags, setInitialTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -38,6 +42,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         setDescription(product.description);
         setImageUrl1(product.imageUrl1);
         setImageUrl2(product.imageUrl2);
+        setInitialTags(product.tags || []);
+        setTags(product.tags || []);
       } catch {
         alert("Failed to load product");
         router.push("/product");
@@ -70,6 +76,7 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
           description: description.trim(),
           imageUrl1,
           imageUrl2,
+          tags,
         }),
       });
 
@@ -176,6 +183,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
               />
             </div>
           </div>
+
+          <TagSection imageUrls={[imageUrl1, imageUrl2]} onTagsChange={setTags} initialTags={initialTags} />
 
           <div className="flex justify-end gap-3 pt-2">
             <button

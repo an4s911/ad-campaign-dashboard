@@ -7,13 +7,36 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const product = await prisma.product.findUnique({ where: { id } });
+    const product = await prisma.product.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        imageUrl1: true,
+        imageUrl2: true,
+        isEnabled: true,
+        createdAt: true,
+        tags: {
+          select: {
+            tag: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    return NextResponse.json(product);
+    return NextResponse.json({
+      ...product,
+      tags: product.tags.map((pt) => pt.tag.name),
+    });
   } catch (error) {
     console.error("Failed to fetch product:", error);
     return NextResponse.json(
@@ -30,7 +53,33 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, description, imageUrl1, imageUrl2, isEnabled } = body;
+    const { name, description, imageUrl1, imageUrl2, isEnabled, tags } = body;
+
+    // Process tags if provided
+    let tagData = {};
+    if (tags !== undefined) {
+      const tagNames = Array.isArray(tags) ? tags : [];
+      const tagIds = await Promise.all(
+        tagNames.map(async (tagName: string) => {
+          const name = tagName.toLowerCase().trim();
+          const tag = await prisma.tag.upsert({
+            where: { name },
+            update: {},
+            create: { name },
+          });
+          return tag.id;
+        })
+      );
+
+      tagData = {
+        tags: {
+          deleteMany: {},
+          create: tagIds.map((tagId) => ({
+            tagId,
+          })),
+        },
+      };
+    }
 
     const product = await prisma.product.update({
       where: { id },
@@ -40,10 +89,32 @@ export async function PUT(
         ...(imageUrl1 !== undefined && { imageUrl1 }),
         ...(imageUrl2 !== undefined && { imageUrl2 }),
         ...(isEnabled !== undefined && { isEnabled }),
+        ...tagData,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        imageUrl1: true,
+        imageUrl2: true,
+        isEnabled: true,
+        createdAt: true,
+        tags: {
+          select: {
+            tag: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    return NextResponse.json(product);
+    return NextResponse.json({
+      ...product,
+      tags: product.tags.map((pt) => pt.tag.name),
+    });
   } catch (error) {
     console.error("Failed to update product:", error);
     return NextResponse.json(
