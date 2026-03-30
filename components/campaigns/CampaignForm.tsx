@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import TogglePills from "@/components/campaigns/TogglePills";
+import MutualExclusionPills from "@/components/campaigns/MutualExclusionPills";
+import LocationTargeting, { TargetLocation } from "@/components/campaigns/LocationTargeting";
 import StyleCard from "@/components/styles/StyleCard";
 import StylePreviewModal, { StylePreviewData } from "@/components/styles/StylePreviewModal";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
@@ -15,6 +17,7 @@ interface Product {
   imageUrl1: string;
   imageUrl2: string | null;
   isEnabled: boolean;
+  tags: string[];
 }
 
 interface GeneratedImage {
@@ -42,11 +45,41 @@ const STORE_CATEGORIES = [
 
 const GENDER_OPTIONS = ["Male", "Female", "All"];
 
-const AUDIENCE_TAGS = [
-  "Businessmen", "College Students", "Families", "Couples", "Gym Goers",
-  "Young Professionals", "Seniors", "Parents", "Teens", "Commuters",
-  "Tourists", "Luxury Shoppers", "Budget Shoppers",
+const INCOME_LEVELS = ["Low", "Middle", "Upper-Middle", "High"];
+
+const SHOPPING_BEHAVIORS = [
+  "Impulse Buyers", "Deal Seekers", "Brand Loyal", "First-Time Shoppers",
+  "Repeat Customers", "Window Shoppers", "Bulk Buyers",
 ];
+
+const DAYS_OF_WEEK = [
+  { value: "mon", label: "Mon" },
+  { value: "tue", label: "Tue" },
+  { value: "wed", label: "Wed" },
+  { value: "thu", label: "Thu" },
+  { value: "fri", label: "Fri" },
+  { value: "sat", label: "Sat" },
+  { value: "sun", label: "Sun" },
+];
+const ALL_DAY_VALUES = DAYS_OF_WEEK.map((d) => d.value);
+
+const TIME_OF_DAY_OPTIONS = [
+  "Morning (6am-12pm)",
+  "Afternoon (12pm-5pm)",
+  "Evening (5pm-9pm)",
+  "Night (9pm-6am)",
+  "All Day",
+];
+
+const WEATHER_OPTIONS = ["Sunny", "Rainy", "Cold", "Hot", "Snowy", "Any"];
+
+const TAG_TO_CATEGORY: Record<string, string> = {
+  food: "Food", grocery: "Grocery", clothing: "Clothing", apparel: "Clothing",
+  electronics: "Electronics", tech: "Electronics", pharmacy: "Pharmacy", medicine: "Pharmacy",
+  sports: "Sports", fitness: "Sports", home: "Home & Living", furniture: "Home & Living",
+  beauty: "Beauty", cosmetics: "Beauty", books: "Books", toys: "Toys",
+  automotive: "Automotive", car: "Automotive", pet: "Pet Supplies",
+};
 
 const POLL_INTERVAL = 3000;
 const passthroughImageLoader = ({ src }: { src: string }) => src;
@@ -63,7 +96,15 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   const [ageMin, setAgeMin] = useState<string>("");
   const [ageMax, setAgeMax] = useState<string>("");
   const [gender, setGender] = useState<string[]>([]);
-  const [audienceTags, setAudienceTags] = useState<string[]>([]);
+  const [productTags, setProductTags] = useState<string[]>([]);
+  const [customTags, setCustomTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState("");
+  const [incomeLevel, setIncomeLevel] = useState<string[]>([]);
+  const [shoppingBehavior, setShoppingBehavior] = useState<string[]>([]);
+  const [targetDays, setTargetDays] = useState<string[]>(ALL_DAY_VALUES);
+  const [timeOfDay, setTimeOfDay] = useState<string[]>(["All Day"]);
+  const [weather, setWeather] = useState<string[]>(["Any"]);
+  const [targetLocations, setTargetLocations] = useState<TargetLocation[]>([]);
   const [ideas, setIdeas] = useState<string[]>([""]);
   const [allStyles, setAllStyles] = useState<Style[]>([]);
   const [selectedStyleIds, setSelectedStyleIds] = useState<string[]>([]);
@@ -89,6 +130,41 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     setTimeout(() => setToastVisible(false), 3000);
     setTimeout(() => setToast(null), 3400);
   }
+
+  // Derived tags from selected products (deduplicated, sorted)
+  const derivedProductTags = useMemo(() => {
+    const selected = allProducts.filter((p) => selectedProductIds.includes(p.id));
+    const tagSet = new Set<string>();
+    selected.forEach((p) => p.tags?.forEach((t) => tagSet.add(t)));
+    return Array.from(tagSet).sort();
+  }, [allProducts, selectedProductIds]);
+
+  // Sync productTags when derived tags or custom tags change
+  useEffect(() => {
+    const derived = new Set(derivedProductTags);
+    const filteredCustom = customTags.filter((t) => !derived.has(t));
+    setProductTags([...derivedProductTags, ...filteredCustom]);
+  }, [derivedProductTags, customTags]);
+
+  // Auto-match product tags to store categories (convenience pre-selection)
+  useEffect(() => {
+    if (derivedProductTags.length === 0) return;
+    const toAdd: string[] = [];
+    derivedProductTags.forEach((tag) => {
+      const lower = tag.toLowerCase();
+      for (const [key, category] of Object.entries(TAG_TO_CATEGORY)) {
+        if (lower.includes(key) && STORE_CATEGORIES.includes(category)) {
+          toAdd.push(category);
+        }
+      }
+    });
+    if (toAdd.length === 0) return;
+    setStoreCategories((prev) => {
+      const next = new Set(prev);
+      toAdd.forEach((c) => next.add(c));
+      return Array.from(next);
+    });
+  }, [derivedProductTags]);
 
   // Count non-empty ideas
   const activeIdeas = useMemo(
@@ -165,7 +241,14 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         setAgeMin(data.targetAgeMin != null ? String(data.targetAgeMin) : "");
         setAgeMax(data.targetAgeMax != null ? String(data.targetAgeMax) : "");
         setGender(data.targetGender ?? []);
-        setAudienceTags(data.targetTags ?? []);
+        setProductTags(data.targetProductTags ?? []);
+        setCustomTags(data.targetProductTags ?? []);
+        setIncomeLevel(data.targetIncome ?? []);
+        setShoppingBehavior(data.targetShoppingBehavior ?? []);
+        setTargetDays(data.targetDays ?? ALL_DAY_VALUES);
+        setTimeOfDay(data.targetTimeOfDay ?? ["All Day"]);
+        setWeather(data.targetWeather ?? ["Any"]);
+        setTargetLocations(data.targetLocations ?? []);
         setIdeas(
           data.ideas.length > 0
             ? data.ideas.map((i: { description: string }) => i.description)
@@ -273,6 +356,24 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     // Ideas: do NOT delete. They become visually disabled via the render logic.
   }
 
+  function handleCustomTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const tag = customTagInput.trim().toLowerCase();
+    if (!tag || productTags.includes(tag)) {
+      setCustomTagInput("");
+      return;
+    }
+    setCustomTags((prev) => [...prev, tag]);
+    setProductTags((prev) => [...prev, tag]);
+    setCustomTagInput("");
+  }
+
+  function removeCustomTag(tag: string) {
+    setCustomTags((prev) => prev.filter((t) => t !== tag));
+    setProductTags((prev) => prev.filter((t) => t !== tag));
+  }
+
   async function saveCampaign(status: "draft" | "active" = "draft") {
     if (!validate()) return;
 
@@ -285,7 +386,14 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         targetAgeMin: ageMin ? Number(ageMin) : null,
         targetAgeMax: ageMax ? Number(ageMax) : null,
         targetGender: gender,
-        targetTags: audienceTags,
+        targetTags: [],
+        targetProductTags: productTags,
+        targetIncome: incomeLevel,
+        targetShoppingBehavior: shoppingBehavior,
+        targetDays,
+        targetTimeOfDay: timeOfDay,
+        targetWeather: weather,
+        targetLocations,
         productIds: selectedProductIds,
         ideas: buildIdeas(),
         styles: buildStyles(),
@@ -333,7 +441,14 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
             targetAgeMin: ageMin ? Number(ageMin) : null,
             targetAgeMax: ageMax ? Number(ageMax) : null,
             targetGender: gender,
-            targetTags: audienceTags,
+            targetTags: [],
+            targetProductTags: productTags,
+            targetIncome: incomeLevel,
+            targetShoppingBehavior: shoppingBehavior,
+            targetDays,
+            targetTimeOfDay: timeOfDay,
+            targetWeather: weather,
+            targetLocations,
             productIds: selectedProductIds,
             ideas: buildIdeas(),
             styles: buildStyles(),
@@ -720,11 +835,60 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           <h2 className="mb-4 text-base font-semibold text-foreground">Targeting</h2>
 
           <div className="space-y-5">
+            {/* Store Categories */}
             <div>
               <p className="mb-2 text-sm font-medium text-card-foreground">Store Categories</p>
               <TogglePills options={STORE_CATEGORIES} selected={storeCategories} onChange={setStoreCategories} label="Store Categories" />
             </div>
 
+            {/* Product Tags */}
+            <div>
+              <p className="mb-2 text-sm font-medium text-card-foreground">Product Tags</p>
+              {selectedProductIds.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Select products above to see their tags here.</p>
+              ) : (
+                <div className="space-y-2">
+                  {productTags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {productTags.map((tag) => {
+                        const isCustom = customTags.includes(tag);
+                        return (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center gap-1 rounded-xl border border-primary bg-primary/10 px-3.5 py-1.5 text-sm font-medium text-primary"
+                          >
+                            {tag}
+                            {isCustom && (
+                              <button
+                                type="button"
+                                onClick={() => removeCustomTag(tag)}
+                                aria-label={`Remove tag ${tag}`}
+                                className="ml-0.5 rounded-full hover:text-primary/70 transition-colors"
+                              >
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    value={customTagInput}
+                    onChange={(e) => setCustomTagInput(e.target.value)}
+                    onKeyDown={handleCustomTagKeyDown}
+                    placeholder="Add custom targeting tag..."
+                    autoComplete="off"
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Age Range */}
             <div>
               <p className="mb-2 text-sm font-medium text-card-foreground">Age Range</p>
               <div className="flex items-center gap-2">
@@ -756,14 +920,97 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
               </div>
             </div>
 
+            {/* Gender */}
             <div>
               <p className="mb-2 text-sm font-medium text-card-foreground">Gender</p>
               <TogglePills options={GENDER_OPTIONS} selected={gender} onChange={setGender} label="Gender" />
             </div>
 
+            {/* Income Level */}
             <div>
-              <p className="mb-2 text-sm font-medium text-card-foreground">Audience Tags</p>
-              <TogglePills options={AUDIENCE_TAGS} selected={audienceTags} onChange={setAudienceTags} label="Audience Tags" />
+              <p className="mb-2 text-sm font-medium text-card-foreground">Income Level</p>
+              <TogglePills options={INCOME_LEVELS} selected={incomeLevel} onChange={setIncomeLevel} label="Income Level" />
+            </div>
+
+            {/* Shopping Behavior */}
+            <div>
+              <p className="mb-2 text-sm font-medium text-card-foreground">Shopping Behavior</p>
+              <TogglePills options={SHOPPING_BEHAVIORS} selected={shoppingBehavior} onChange={setShoppingBehavior} label="Shopping Behavior" />
+            </div>
+
+            {/* Day of Week */}
+            <div>
+              <div className="mb-2 flex items-center gap-3">
+                <p className="text-sm font-medium text-card-foreground">Day of Week</p>
+                <button
+                  type="button"
+                  onClick={() => setTargetDays(ALL_DAY_VALUES)}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetDays([])}
+                  className="text-xs text-muted-foreground hover:underline"
+                >
+                  Deselect All
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Day of Week">
+                {DAYS_OF_WEEK.map(({ value, label }) => {
+                  const isActive = targetDays.includes(value);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() =>
+                        setTargetDays((prev) =>
+                          prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]
+                        )
+                      }
+                      className={`rounded-xl border px-3.5 py-1.5 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                        isActive
+                          ? "border-primary bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(91,91,214,0.15)]"
+                          : "border-border bg-card text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-muted-foreground/30 hover:text-foreground"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Time of Day */}
+            <div>
+              <p className="mb-2 text-sm font-medium text-card-foreground">Time of Day</p>
+              <MutualExclusionPills
+                options={TIME_OF_DAY_OPTIONS}
+                selected={timeOfDay}
+                onChange={setTimeOfDay}
+                exclusiveOption="All Day"
+                label="Time of Day"
+              />
+            </div>
+
+            {/* Weather Conditions */}
+            <div>
+              <p className="mb-2 text-sm font-medium text-card-foreground">Weather Conditions</p>
+              <MutualExclusionPills
+                options={WEATHER_OPTIONS}
+                selected={weather}
+                onChange={setWeather}
+                exclusiveOption="Any"
+                label="Weather Conditions"
+              />
+            </div>
+
+            {/* Location Targeting */}
+            <div>
+              <p className="mb-2 text-sm font-medium text-card-foreground">Location Targeting</p>
+              <LocationTargeting locations={targetLocations} onChange={setTargetLocations} />
             </div>
           </div>
         </section>

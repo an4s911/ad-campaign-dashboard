@@ -48,13 +48,20 @@ model Campaign {
   name                  String
   adCount               Int
   status                String   @default("draft")
-  targetStoreCategories Json
-  targetAgeMin          Int?
-  targetAgeMax          Int?
-  targetGender          Json
-  targetTags            Json
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  targetStoreCategories  Json
+  targetAgeMin           Int?
+  targetAgeMax           Int?
+  targetGender           Json
+  targetTags             Json
+  targetProductTags      Json     @default("[]")
+  targetIncome           Json     @default("[]")
+  targetShoppingBehavior Json     @default("[]")
+  targetDays             Json     @default("[\"mon\",\"tue\",\"wed\",\"thu\",\"fri\",\"sat\",\"sun\"]")
+  targetTimeOfDay        Json     @default("[\"all_day\"]")
+  targetWeather          Json     @default("[\"any\"]")
+  targetLocations        Json     @default("[]")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   products        CampaignProduct[]
   ideas           CampaignIdea[]
