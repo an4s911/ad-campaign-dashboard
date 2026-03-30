@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import type {
+  GeoJSONSource,
+  Map as MapboxMap,
+  MapMouseEvent,
+  Marker as MapboxMarker,
+} from "mapbox-gl";
 
 export interface TargetLocation {
   lat: number;
@@ -66,10 +72,10 @@ export default function LocationTargeting({
   onChange,
 }: LocationTargetingProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<MapboxMap | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
-  const pendingMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const markersRef = useRef<MapboxMarker[]>([]);
+  const pendingMarkerRef = useRef<MapboxMarker | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<GeocodingFeature[]>([]);
@@ -81,56 +87,115 @@ export default function LocationTargeting({
   } | null>(null);
   const [radiusKm, setRadiusKm] = useState(10);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [isInitializingMap, setIsInitializingMap] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const missingToken = !token;
+  const searchDisabled = missingToken || !mapLoaded || !!errorMessage;
 
-  // Initialize map
-  useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
-    if (!token) return;
+  const handleMapClick = useCallback(
+    async (event: MapMouseEvent) => {
+      const { lng, lat } = event.lngLat;
+      let label = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 
-    let map: mapboxgl.Map;
-    (async () => {
-      const mapboxgl = (await import("mapbox-gl")).default;
-
-      mapboxgl.accessToken = token;
-      map = new mapboxgl.Map({
-        container: mapContainerRef.current!,
-        style: "mapbox://styles/mapbox/dark-v11",
-        center: [0, 20],
-        zoom: 2,
-      });
-      mapRef.current = map;
-
-      map.on("load", () => {
-        setMapLoaded(true);
-      });
-
-      map.on("click", async (e) => {
-        const { lng, lat } = e.lngLat;
-        let label = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      if (token) {
         try {
           const res = await fetch(
             `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&limit=1`
           );
+
           if (res.ok) {
             const data = await res.json();
             if (data.features?.[0]?.place_name) {
               label = data.features[0].place_name;
             }
+          } else {
+            setErrorMessage(
+              "Reverse geocoding failed. Check the Mapbox token and its URL restrictions."
+            );
           }
         } catch {
-          // keep coordinate-based label
+          setErrorMessage(
+            "Reverse geocoding failed. Check your network connection and Mapbox token."
+          );
         }
-        setPendingPin({ lat, lng, label });
-      });
+      }
+
+      setPendingPin({ lat, lng, label });
+    },
+    [token]
+  );
+
+  // Initialize map
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return undefined;
+
+    if (!token) {
+      setErrorMessage(
+        "Location targeting is unavailable right now. Please try again later."
+      );
+      return undefined;
+    }
+
+    let map: MapboxMap | null = null;
+    let cancelled = false;
+    setIsInitializingMap(true);
+    setErrorMessage(null);
+    (async () => {
+      try {
+        const mapboxgl = (await import("mapbox-gl")).default;
+        if (cancelled || !mapContainerRef.current) return;
+
+        mapboxgl.accessToken = token;
+        map = new mapboxgl.Map({
+          container: mapContainerRef.current,
+          style: "mapbox://styles/mapbox/dark-v11",
+          center: [0, 20],
+          zoom: 2,
+        });
+        mapRef.current = map;
+
+        map.on("load", () => {
+          if (cancelled) return;
+          setMapLoaded(true);
+          setIsInitializingMap(false);
+          setErrorMessage(null);
+        });
+
+        map.on("error", (event) => {
+          if (cancelled) return;
+          setIsInitializingMap(false);
+          setMapLoaded(false);
+          setErrorMessage(
+            event.error?.message ??
+              "Mapbox failed to load. Check the token and whether it allows your current URL."
+          );
+        });
+
+        map.on("click", handleMapClick);
+      } catch {
+        if (cancelled) return;
+        setIsInitializingMap(false);
+        setMapLoaded(false);
+        setErrorMessage(
+          "Mapbox failed to initialize. Check the token, install state, and browser console."
+        );
+      }
     })();
 
     return () => {
+      cancelled = true;
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
       map?.remove();
       mapRef.current = null;
+      setMapLoaded(false);
+      setIsInitializingMap(false);
     };
-  }, [token]);
+  }, [handleMapClick, token]);
 
   // Draw/update pending pin and circle
   useEffect(() => {
@@ -188,7 +253,7 @@ export default function LocationTargeting({
   useEffect(() => {
     if (!mapRef.current || !mapLoaded || !pendingPin) return;
     const map = mapRef.current;
-    const source = map.getSource("pending-circle") as mapboxgl.GeoJSONSource | undefined;
+    const source = map.getSource("pending-circle") as GeoJSONSource | undefined;
     if (source) {
       source.setData(createCircleGeoJSON(pendingPin.lng, pendingPin.lat, radiusKm));
     }
@@ -250,8 +315,24 @@ export default function LocationTargeting({
 
   function handleSearchInput(value: string) {
     setSearchQuery(value);
+    setErrorMessage((current) =>
+      current?.startsWith("Location search failed") ? null : current
+    );
     if (!value.trim()) {
       setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    if (!token) {
+      setShowDropdown(false);
+      setErrorMessage(
+        "Location targeting is unavailable right now. Please try again later."
+      );
+      return;
+    }
+
+    if (!mapLoaded) {
       setShowDropdown(false);
       return;
     }
@@ -262,13 +343,24 @@ export default function LocationTargeting({
         const res = await fetch(
           `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(value)}.json?access_token=${token}&limit=5`
         );
-        if (res.ok) {
-          const data = await res.json();
-          setSearchResults(data.features ?? []);
-          setShowDropdown(true);
+        if (!res.ok) {
+          setSearchResults([]);
+          setShowDropdown(false);
+          setErrorMessage(
+            "Location search failed. Check the Mapbox token and its URL restrictions."
+          );
+          return;
         }
+
+        const data = await res.json();
+        setSearchResults(data.features ?? []);
+        setShowDropdown(true);
       } catch {
-        // ignore
+        setSearchResults([]);
+        setShowDropdown(false);
+        setErrorMessage(
+          "Location search failed. Check your network connection and Mapbox token."
+        );
       }
     }, 300);
   }
@@ -313,8 +405,15 @@ export default function LocationTargeting({
           onChange={(e) => handleSearchInput(e.target.value)}
           onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
           onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-          placeholder="Search for a city or address..."
+          placeholder={
+            missingToken
+              ? "Location search is unavailable right now"
+              : isInitializingMap
+                ? "Loading map..."
+                : "Search for a city or address..."
+          }
           autoComplete="off"
+          disabled={searchDisabled}
           className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         />
         {showDropdown && searchResults.length > 0 && (
@@ -334,11 +433,36 @@ export default function LocationTargeting({
         )}
       </div>
 
+      {errorMessage && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900">
+          {errorMessage}
+        </div>
+      )}
+
       {/* Map */}
-      <div
-        ref={mapContainerRef}
-        className="w-full h-[400px] rounded-lg border border-border overflow-hidden"
-      />
+      <div className="relative">
+        <div
+          ref={mapContainerRef}
+          className={`w-full h-[400px] rounded-lg border border-border overflow-hidden ${
+            !mapLoaded ? "bg-muted/30" : ""
+          }`}
+        />
+        {!mapLoaded && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg border border-dashed border-border bg-background/90 p-6 text-center">
+            <div className="max-w-sm space-y-2">
+              <p className="text-sm font-medium text-foreground">
+                {isInitializingMap ? "Loading Mapbox map..." : "Map unavailable"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {missingToken
+                  ? "Location targeting is temporarily unavailable."
+                  : errorMessage ??
+                    "The map could not load. Check the token and your Mapbox URL restrictions."}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Radius slider (only when pending pin exists) */}
       {pendingPin && (
