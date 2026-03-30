@@ -143,7 +143,7 @@ export default function EditStylePage({
         </div>
       )}
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className={`grid gap-5 ${showPreview ? "xl:grid-cols-2" : "xl:grid-cols-1"}`}>
         <div className="rounded-2xl border border-border bg-card p-6">
           <div className="mb-4 space-y-2">
             <Label htmlFor="style-name">Style Name</Label>
@@ -176,15 +176,15 @@ export default function EditStylePage({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-card-foreground">Preview</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Review the rendered markdown before saving.
-            </p>
-          </div>
+        {showPreview && (
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-card-foreground">Preview</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Review the rendered markdown before saving.
+              </p>
+            </div>
 
-          {showPreview ? (
             <div className="markdown-prose prose prose-sm min-h-140 max-w-none overflow-y-auto rounded-xl border border-border bg-muted p-5">
               {prompt.trim() ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -196,12 +196,8 @@ export default function EditStylePage({
                 </p>
               )}
             </div>
-          ) : (
-            <div className="flex min-h-140 items-center justify-center rounded-xl border border-dashed border-border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-              Click <span className="mx-1 font-medium text-foreground">Preview Markdown</span> to render the style guide without saving.
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
