@@ -3,56 +3,53 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
-interface ImagePreviewModalProps {
+export default function ImagePreviewModal({
+  imageUrl,
+  onClose,
+}: {
   imageUrl: string | null;
   onClose: () => void;
-}
-
-export default function ImagePreviewModal({ imageUrl, onClose }: ImagePreviewModalProps) {
+}) {
   useEffect(() => {
     if (!imageUrl) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
     }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
   }, [imageUrl, onClose]);
 
-  if (!imageUrl || typeof document === "undefined") return null;
+  if (!imageUrl) return null;
 
   return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Image preview"
-      className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm transition-opacity overscroll-contain"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fade-in overscroll-contain"
       onClick={onClose}
     >
       <button
-        type="button"
         onClick={onClose}
         aria-label="Close preview"
-        className="fixed right-4 top-4 z-110 rounded-full p-2 text-white/70 transition-colors hover:bg-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        className="fixed right-4 top-4 z-110 rounded-xl p-2.5 text-white/60 transition-colors duration-150 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
       >
-        <svg className="h-8 w-8" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg aria-hidden="true" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
         </svg>
       </button>
-      <div 
-        className="relative flex max-h-[90vh] max-w-[95vw] items-center justify-center"
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageUrl}
+        alt="Preview"
+        className="max-h-[85vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl animate-scale-in"
         onClick={(e) => e.stopPropagation()}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img 
-          src={imageUrl} 
-          alt="Full size preview" 
-          className="max-h-[90vh] max-w-full rounded-lg object-contain shadow-2xl" 
-        />
-      </div>
+      />
     </div>,
     document.body
   );

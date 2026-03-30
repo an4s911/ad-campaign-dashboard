@@ -43,15 +43,15 @@ export default function SetupForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-card text-card-foreground border border-border rounded-lg shadow-lg p-6 space-y-4"
+      className="shadow-card rounded-2xl border border-border bg-card p-6 space-y-5"
     >
       {error && (
-        <div className="bg-error/10 border border-error/20 text-error px-4 py-3 rounded-lg text-sm">
+        <div className="animate-slide-down rounded-xl border border-error/20 bg-error/8 px-4 py-3 text-sm text-error">
           {error}
         </div>
       )}
 
-      <div>
+      <div className="space-y-1.5">
         <Label htmlFor="fullName">Full Name</Label>
         <Input
           id="fullName"
@@ -59,11 +59,11 @@ export default function SetupForm() {
           onChange={(e) => setFullName(e.target.value)}
           placeholder="John Doe"
           required
-          className="mt-1"
+          autoComplete="name"
         />
       </div>
 
-      <div>
+      <div className="space-y-1.5">
         <Label htmlFor="username">Username</Label>
         <Input
           id="username"
@@ -73,16 +73,17 @@ export default function SetupForm() {
           pattern="^[a-z0-9_]{3,30}$"
           title="3-30 characters: lowercase letters, numbers, underscores"
           required
-          className="mt-1"
+          autoComplete="username"
+          spellCheck={false}
         />
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs text-muted-foreground">
           Lowercase letters, numbers, and underscores only
         </p>
       </div>
 
-      <div>
+      <div className="space-y-1.5">
         <Label htmlFor="email">
-          Email <span className="text-muted-foreground">(optional)</span>
+          Email <span className="text-muted-foreground font-normal">(optional)</span>
         </Label>
         <Input
           id="email"
@@ -90,20 +91,20 @@ export default function SetupForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="admin@example.com"
-          className="mt-1"
+          autoComplete="email"
         />
       </div>
 
-      <div className="bg-warning/10 border border-warning/20 text-warning px-4 py-3 rounded-lg text-sm">
-        The initial password is set from the{" "}
-        <code className="font-mono bg-warning/20 px-1 rounded">
+      <div className="rounded-xl border border-warning/20 bg-warning/8 px-4 py-3 text-sm text-foreground">
+        The initial password comes from the{" "}
+        <code className="rounded bg-warning/10 px-1.5 py-0.5 font-mono text-xs">
           SUPER_PASSWORD
         </code>{" "}
-        environment variable. You will be prompted to change it after login.
+        environment variable. You&apos;ll be prompted to change it.
       </div>
 
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Creating account..." : "Create Account"}
+      <Button type="submit" className="w-full" size="lg" disabled={loading}>
+        {loading ? "Creating account\u2026" : "Create Account"}
       </Button>
     </form>
   );

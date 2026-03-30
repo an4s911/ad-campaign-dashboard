@@ -26,10 +26,10 @@ export default function TogglePills({ options, selected, onChange, label }: Togg
             type="button"
             onClick={() => toggle(option)}
             aria-pressed={isActive}
-            className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+            className={`rounded-xl border px-3.5 py-1.5 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
               isActive
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-input bg-card text-card-foreground hover:border-border hover:bg-muted"
+                ? "border-primary bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(91,91,214,0.15)]"
+                : "border-border bg-card text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:border-muted-foreground/30 hover:text-foreground"
             }`}
           >
             {option}

@@ -20,24 +20,38 @@ export default async function LoginPage({
   if (userCount === 0) redirect("/setup");
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative">
-      <div className="absolute top-4 right-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+      {/* Background decoration */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-[40%] -right-[20%] h-[80vh] w-[80vh] rounded-full bg-primary/[0.04] blur-3xl" />
+        <div className="absolute -bottom-[30%] -left-[20%] h-[60vh] w-[60vh] rounded-full bg-primary/[0.03] blur-3xl" />
+      </div>
+
+      {/* Theme toggle */}
+      <div className="absolute right-5 top-5 z-10">
         <ThemeToggle />
       </div>
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground">
-            Sign In
+
+      {/* Content */}
+      <div className="relative w-full max-w-[400px] animate-slide-up">
+        {/* Brand */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary shadow-[0_4px_16px_rgba(91,91,214,0.3)]">
+            <span className="text-lg font-bold text-primary-foreground">B</span>
+          </div>
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
+            Welcome back
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Bonmedia Ad Dashboard
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Sign in to Bonmedia Ad Dashboard
           </p>
         </div>
 
         {params.setup === "complete" && (
-          <div className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg text-sm mb-4">
-            Account created successfully. Sign in with your username and the
-            password from the <code className="font-mono">SUPER_PASSWORD</code>{" "}
+          <div className="mb-4 animate-slide-down rounded-xl border border-success/20 bg-success/8 px-4 py-3 text-sm text-foreground">
+            <span className="font-medium">Account created.</span>{" "}
+            Sign in with your username and the{" "}
+            <code className="rounded bg-success/10 px-1.5 py-0.5 font-mono text-xs">SUPER_PASSWORD</code>{" "}
             environment variable.
           </div>
         )}

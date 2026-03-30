@@ -7,7 +7,7 @@ const Label = forwardRef<
   return (
     <label
       ref={ref}
-      className={`block text-sm font-medium text-foreground ${className}`}
+      className={`block text-sm font-medium text-foreground tracking-[-0.01em] ${className}`}
       {...props}
     />
   );

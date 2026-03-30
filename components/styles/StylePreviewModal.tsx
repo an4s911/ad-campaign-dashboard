@@ -1,81 +1,70 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Button } from "@/components/ui/button";
 
 export interface StylePreviewData {
   id: string;
   name: string;
-  prompt: string;
-}
-
-interface StylePreviewModalProps {
-  style: StylePreviewData | null;
-  onClose: () => void;
-  editHref?: string;
+  content?: string;
+  prompt?: string;
 }
 
 export default function StylePreviewModal({
   style,
   onClose,
-  editHref,
-}: StylePreviewModalProps) {
+}: {
+  style: StylePreviewData | null;
+  onClose: () => void;
+}) {
   useEffect(() => {
     if (!style) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
     }
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [style, onClose]);
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, style]);
+  if (!style) return null;
 
-  if (!style || typeof document === "undefined") return null;
+  const displayContent = style.content || style.prompt || "";
 
   return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label={style.name}
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 p-4 overscroll-contain"
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in overscroll-contain"
       onClick={onClose}
     >
       <div
-        className="flex h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
+        className="relative max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-card-hover animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div>
-            <h2 className="text-lg font-semibold text-card-foreground">
-              {style.name}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Full markdown preview
-            </p>
-          </div>
+          <h2 className="text-lg font-semibold text-foreground truncate pr-4">{style.name}</h2>
           <div className="flex items-center gap-2">
-            {editHref && (
-              <Link href={editHref}>
-                <Button className="gap-2">
-                  <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
-                  </svg>
-                  Edit Style
-                </Button>
-              </Link>
-            )}
+            <Link
+              href={`/styles/${style.id}/edit`}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-xs font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:bg-muted"
+            >
+              <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+              </svg>
+              Edit
+            </Link>
             <button
-              type="button"
               onClick={onClose}
-              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label="Close preview"
+              aria-label="Close"
+              className="rounded-lg p-1.5 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
             >
               <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -83,11 +72,10 @@ export default function StylePreviewModal({
             </button>
           </div>
         </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-          <div className="markdown-prose prose prose-sm min-h-full max-w-none rounded-xl border border-border bg-muted p-5">
+        <div className="overflow-y-auto p-6" style={{ maxHeight: "calc(80vh - 72px)" }}>
+          <div className="markdown-prose prose prose-sm max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {style.prompt}
+              {displayContent}
             </ReactMarkdown>
           </div>
         </div>

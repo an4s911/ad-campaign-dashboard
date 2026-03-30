@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
 });
 
@@ -14,8 +14,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ad Campaign Dashboard",
-  description: "Ad Campaign Dashboard",
+  title: "Bonmedia \u2014 Ad Campaign Dashboard",
+  description: "Create and manage AI-powered ad campaigns",
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F7F8FC" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B0E17" },
+  ],
 };
 
 export default function RootLayout({
@@ -26,8 +33,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#f4f5f8" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
         <script
           dangerouslySetInnerHTML={{
              __html: `
@@ -42,7 +47,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${outfit.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <ThemeProvider>
           {children}
