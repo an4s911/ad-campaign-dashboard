@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ad Campaign Dashboard
 
-## Getting Started
+Internal dashboard for managing products, campaigns, styles, and ad generation workflows.
 
-First, run the development server:
+## Development
+
+Run the app locally with:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Build for production with:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Navigation Guard Notes
 
-## Learn More
+Unsaved-change protection in the dashboard should follow this rule:
 
-To learn more about Next.js, take a look at the following resources:
+- Keep normal `next/link` usage. Dirty-form protection for link clicks, browser refresh or close, and back or forward should be handled by shared provider-level logic.
+- For imperative navigation such as `router.push()`, `router.replace()`, and `router.back()`, use the shared guarded helpers from the unsaved-changes infrastructure. The Next.js App Router does not expose a clean global interception API for those imperative calls.
+- Do not introduce a separate `GuardedLink` component unless there is a concrete gap the provider-level anchor interception cannot cover.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Reasoning:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Plain links render to anchors, so they can be intercepted centrally.
+- Imperative router calls happen inside arbitrary components and cannot be reliably blocked globally without brittle framework-level hacks.
+- The preferred pattern is shared guard logic with page-level dirty-state registration.
