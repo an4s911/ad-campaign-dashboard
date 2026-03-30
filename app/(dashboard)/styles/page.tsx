@@ -44,17 +44,18 @@ export default function StylesPage() {
 
   return (
     <div>
-      {toast && (
-        <div
-          className={`fixed right-6 top-6 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg transition-all ${
-            toast.type === "error"
-              ? "bg-error text-error-foreground"
-              : "bg-success text-success-foreground"
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
+      <div
+        aria-live="polite"
+        className={`fixed right-6 top-6 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg transition-opacity ${
+          toast ? "opacity-100" : "pointer-events-none opacity-0"
+        } ${
+          toast?.type === "error"
+            ? "bg-error text-error-foreground"
+            : "bg-success text-success-foreground"
+        }`}
+      >
+        {toast?.message}
+      </div>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -65,7 +66,7 @@ export default function StylesPage() {
         </div>
         <Link href="/styles/new">
           <Button className="gap-2">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             Add Style
@@ -82,7 +83,7 @@ export default function StylesPage() {
       ) : styles.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            <svg className="h-7 w-7 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <svg aria-hidden="true" className="h-7 w-7 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 6.75h9m-9 4.5h9m-9 4.5h5.25M6.75 3.75h10.5A2.25 2.25 0 0 1 19.5 6v12a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 18V6a2.25 2.25 0 0 1 2.25-2.25Z" />
             </svg>
           </div>

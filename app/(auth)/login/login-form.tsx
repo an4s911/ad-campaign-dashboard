@@ -86,6 +86,8 @@ export default function LoginForm({ from }: { from?: string }) {
           onChange={(e) => setUsername(e.target.value)}
           placeholder="admin"
           required
+          autoComplete="username"
+          spellCheck={false}
           className="mt-1"
         />
       </div>
@@ -98,12 +100,13 @@ export default function LoginForm({ from }: { from?: string }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoComplete="current-password"
           className="mt-1"
         />
       </div>
 
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Signing in..." : "Sign In"}
+        {loading ? "Signing in\u2026" : "Sign In"}
       </Button>
     </form>
   );

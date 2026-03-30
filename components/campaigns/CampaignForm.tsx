@@ -529,22 +529,24 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
 
   return (
     <div className="mx-auto max-w-4xl">
-      {toast && (
-        <div
-          className={`fixed right-6 top-6 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
-            toast.type === "error" ? "bg-error text-error-foreground " : "bg-success text-success-foreground "
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
+      <div
+        aria-live="polite"
+        className={`fixed right-6 top-6 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg transition-opacity ${
+          toast ? "opacity-100" : "pointer-events-none opacity-0"
+        } ${
+          toast?.type === "error" ? "bg-error text-error-foreground" : "bg-success text-success-foreground"
+        }`}
+      >
+        {toast?.message}
+      </div>
 
       <div className="mb-8 flex items-center gap-4">
         <button
           onClick={() => router.push("/campaign")}
-          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label="Go back"
+          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </button>
@@ -561,8 +563,11 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
             {campaignStatus !== "draft" && (
               <button
                 type="button"
+                role="switch"
+                aria-checked={campaignStatus === "active"}
+                aria-label="Toggle campaign status"
                 onClick={handleToggleStatus}
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                   campaignStatus === "active" ? "bg-success" : "bg-muted"
                 }`}
               >
@@ -582,33 +587,35 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           <h2 className="mb-4 text-base font-semibold text-foreground">Basic Info</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-card-foreground">
+              <label htmlFor="campaign-name" className="mb-1.5 block text-sm font-medium text-card-foreground">
                 Campaign Name <span className="text-error">*</span>
               </label>
               <input
+                id="campaign-name"
                 type="text"
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
                   if (errors.name) setErrors((p) => ({ ...p, name: "" }));
                 }}
-                placeholder="e.g. Summer Sale 2026"
-                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                placeholder="e.g. Summer Sale 2026\u2026"
+                className={`w-full rounded-lg border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   errors.name ? "border-error/50" : "border-input"
                 }`}
               />
               {errors.name && <p className="mt-1 text-xs text-error">{errors.name}</p>}
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-card-foreground">
+              <label htmlFor="ad-count" className="mb-1.5 block text-sm font-medium text-card-foreground">
                 Number of Ads <span className="text-error">*</span>
               </label>
               <input
+                id="ad-count"
                 type="number"
                 min={1}
                 value={adCount}
                 onChange={(e) => handleAdCountChange(parseInt(e.target.value) || 1)}
-                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary ${
+                className={`w-full rounded-lg border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   errors.adCount ? "border-error/50" : "border-input"
                 }`}
               />
@@ -702,43 +709,49 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
 
           <div className="space-y-5">
             <div>
-              <label className="mb-2 block text-sm font-medium text-card-foreground">Store Categories</label>
-              <TogglePills options={STORE_CATEGORIES} selected={storeCategories} onChange={setStoreCategories} />
+              <p className="mb-2 text-sm font-medium text-card-foreground">Store Categories</p>
+              <TogglePills options={STORE_CATEGORIES} selected={storeCategories} onChange={setStoreCategories} label="Store Categories" />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-card-foreground">Age Range</label>
+              <p className="mb-2 text-sm font-medium text-card-foreground">Age Range</p>
               <div className="flex items-center gap-2">
+                <label htmlFor="age-min" className="sr-only">Minimum age</label>
                 <input
+                  id="age-min"
                   type="number"
                   min={0}
                   max={120}
                   placeholder="Min"
                   value={ageMin}
+                  autoComplete="off"
                   onChange={(e) => setAgeMin(e.target.value)}
-                  className="w-24 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-24 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 />
-                <span className="text-muted-foreground">—</span>
+                <span className="text-muted-foreground" aria-hidden="true">—</span>
+                <label htmlFor="age-max" className="sr-only">Maximum age</label>
                 <input
+                  id="age-max"
                   type="number"
                   min={0}
                   max={120}
                   placeholder="Max"
                   value={ageMax}
+                  autoComplete="off"
                   onChange={(e) => setAgeMax(e.target.value)}
-                  className="w-24 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-24 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 />
               </div>
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-card-foreground">Gender</label>
-              <TogglePills options={GENDER_OPTIONS} selected={gender} onChange={setGender} />
+              <p className="mb-2 text-sm font-medium text-card-foreground">Gender</p>
+              <TogglePills options={GENDER_OPTIONS} selected={gender} onChange={setGender} label="Gender" />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-card-foreground">Audience Tags</label>
-              <TogglePills options={AUDIENCE_TAGS} selected={audienceTags} onChange={setAudienceTags} />
+              <p className="mb-2 text-sm font-medium text-card-foreground">Audience Tags</p>
+              <TogglePills options={AUDIENCE_TAGS} selected={audienceTags} onChange={setAudienceTags} label="Audience Tags" />
             </div>
           </div>
         </section>
@@ -767,7 +780,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                       if (errors.ideas) setErrors((p) => ({ ...p, ideas: "" }));
                     }}
                     disabled={disabled}
-                    placeholder={`Idea ${index + 1}: Describe an ad concept...`}
+                    placeholder={`Idea ${index + 1}: Describe an ad concept\u2026`}
                     rows={2}
                     className={`flex-1 resize-none rounded-lg border px-3 py-2 text-sm ${
                       disabled
@@ -785,9 +798,10 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                       <button
                         type="button"
                         onClick={() => removeIdea(index)}
-                        className="mt-1 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-error/10 hover:text-error"
+                        aria-label={`Remove idea ${index + 1}`}
+                        className="mt-1 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                         </svg>
                       </button>
@@ -803,7 +817,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
             onClick={addIdea}
             className="mt-3 flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:opacity-90"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             Add Another Idea
@@ -942,7 +956,8 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                         <button
                           type="button"
                           onClick={() => handleDeleteImage(img.id)}
-                          className="absolute right-2 top-2 rounded-md bg-black/60 p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
+                          aria-label="Delete image"
+                          className="absolute right-2 top-2 rounded-md bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -972,7 +987,8 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                         <button
                           type="button"
                           onClick={() => handleDeleteImage(img.id)}
-                          className="absolute right-2 top-2 rounded-md bg-black/60 p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80"
+                          aria-label="Delete image"
+                          className="absolute right-2 top-2 rounded-md bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />

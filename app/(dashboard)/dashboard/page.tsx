@@ -13,7 +13,7 @@ export default function DashboardPage() {
           Welcome
         </p>
         <h1
-          className={`${orbitron.className} bg-linear-to-r from-blue-400 to-cyan-300 bg-clip-text text-6xl font-black uppercase tracking-[0.18em] text-transparent sm:text-7xl`}
+          className={`${orbitron.className} bg-linear-to-r from-blue-400 to-cyan-300 bg-clip-text text-6xl font-black uppercase tracking-[0.18em] text-transparent text-balance sm:text-7xl`}
         >
           Bonmedia
         </h1>

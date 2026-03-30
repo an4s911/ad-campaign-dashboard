@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession, isUsingBootstrapPassword } from "@/lib/auth";
 import Sidebar from "@/components/layout/Sidebar";
@@ -21,12 +22,12 @@ export default async function DashboardLayout({
       />
       <main className="flex-1 overflow-y-auto p-8">
         {usingDefaultPassword && (
-          <div className="mb-6 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-center justify-between">
+          <div className="mb-6 bg-warning/10 border border-warning/20 text-warning px-4 py-3 rounded-lg text-sm flex items-center justify-between">
             <span>
               You are using the default password. Please{" "}
-              <a href="/settings" className="font-medium underline">
+              <Link href="/settings" className="font-medium underline">
                 change it in Settings
-              </a>
+              </Link>
               .
             </span>
           </div>
