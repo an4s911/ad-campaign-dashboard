@@ -4,11 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import StyleCard from "@/components/styles/StyleCard";
 import StylePreviewModal from "@/components/styles/StylePreviewModal";
+import GenerateStyleFromImageModal from "@/components/styles/GenerateStyleFromImageModal";
 
 interface StyleGuide {
   id: string;
   name: string;
-  content: string;
+  content?: string;
+  prompt?: string;
+  previewImageUrl?: string | null;
   createdAt: string;
 }
 
@@ -16,6 +19,7 @@ export default function StylesPage() {
   const [styles, setStyles] = useState<StyleGuide[]>([]);
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<StyleGuide | null>(null);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
 
@@ -73,15 +77,27 @@ export default function StylesPage() {
           <h1 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">Style Guides</h1>
           <p className="mt-1 text-sm text-muted-foreground">{styles.length} style{styles.length !== 1 ? "s" : ""}</p>
         </div>
-        <Link
-          href="/styles/new"
-          className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.12)] transition-all duration-150 hover:brightness-110"
-        >
-          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Add Style
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowGenerateModal(true)}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:bg-muted"
+          >
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h.008v.008H6V12Zm6 0h.008v.008H12V12Zm6 0h.008v.008H18V12ZM4.5 19.5h15a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5h-15A1.5 1.5 0 0 0 3 6v12a1.5 1.5 0 0 0 1.5 1.5Z" />
+            </svg>
+            Generate from Image
+          </button>
+          <Link
+            href="/styles/new"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.12)] transition-all duration-150 hover:brightness-110"
+          >
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Add Style
+          </Link>
+        </div>
       </div>
 
       {styles.length === 0 ? (
@@ -107,6 +123,7 @@ export default function StylesPage() {
               key={style.id}
               style={style}
               onPreview={() => setPreview(style)}
+              previewImageOnClick
             />
           ))}
         </div>
@@ -115,6 +132,11 @@ export default function StylesPage() {
       {preview && (
         <StylePreviewModal style={preview} onClose={() => setPreview(null)} />
       )}
+
+      <GenerateStyleFromImageModal
+        open={showGenerateModal}
+        onClose={() => setShowGenerateModal(false)}
+      />
     </div>
   );
 }

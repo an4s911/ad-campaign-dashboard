@@ -40,6 +40,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+    const previewImageUrl =
+      typeof body.previewImageUrl === "string" && body.previewImageUrl.trim()
+        ? body.previewImageUrl.trim()
+        : null;
 
     if (!name || !prompt) {
       return NextResponse.json(
@@ -60,6 +64,7 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         prompt,
+        previewImageUrl,
       },
     });
 

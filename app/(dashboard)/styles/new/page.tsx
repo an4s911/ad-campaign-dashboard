@@ -1,21 +1,60 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
+import ImageDropzone from "@/components/ui/ImageDropzone";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GENERATED_STYLE_STORAGE_KEY } from "@/components/styles/GenerateStyleFromImageModal";
+
+const passthroughImageLoader = ({ src }: { src: string }) => src;
 
 export default function NewStylePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("fromImage") !== "1") {
+      return;
+    }
+
+    const stored = sessionStorage.getItem(GENERATED_STYLE_STORAGE_KEY);
+    if (!stored) {
+      router.replace("/styles/new");
+      return;
+    }
+
+    try {
+      const data = JSON.parse(stored) as {
+        prompt?: string;
+        previewImageUrl?: string | null;
+      };
+
+      if (data.prompt) {
+        setPrompt(data.prompt);
+        setShowPreview(true);
+      }
+
+      if (data.previewImageUrl) {
+        setPreviewImageUrl(data.previewImageUrl);
+      }
+    } catch {
+    } finally {
+      sessionStorage.removeItem(GENERATED_STYLE_STORAGE_KEY);
+      router.replace("/styles/new");
+    }
+  }, [router, searchParams]);
 
   async function handleSave() {
     const trimmedName = name.trim();
@@ -36,6 +75,7 @@ export default function NewStylePage() {
         body: JSON.stringify({
           name: trimmedName,
           prompt: trimmedPrompt,
+          previewImageUrl,
         }),
       });
 
@@ -95,6 +135,17 @@ export default function NewStylePage() {
             />
           </div>
 
+          <div className="mb-4 space-y-2">
+            <Label>Preview Image</Label>
+            <ImageDropzone
+              imageUrl={previewImageUrl}
+              onImageUploaded={setPreviewImageUrl}
+              onImageRemoved={() => setPreviewImageUrl(null)}
+              aspectRatioClassName="aspect-[16/10]"
+              previewAlt="Style preview image"
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="style-markdown">Markdown</Label>
             <textarea
@@ -128,6 +179,19 @@ export default function NewStylePage() {
 
           {showPreview ? (
             <div className="markdown-prose prose prose-sm min-h-140 max-w-none overflow-y-auto rounded-xl border border-border bg-muted p-5">
+              {previewImageUrl ? (
+                <div className="not-prose relative mb-5 aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-background">
+                  <Image
+                    src={previewImageUrl}
+                    alt="Style preview"
+                    fill
+                    sizes="(max-width: 1280px) 100vw, 600px"
+                    loader={passthroughImageLoader}
+                    unoptimized
+                    className="object-cover"
+                  />
+                </div>
+              ) : null}
               {prompt.trim() ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {prompt}

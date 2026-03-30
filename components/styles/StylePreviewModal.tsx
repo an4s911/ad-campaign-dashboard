@@ -3,14 +3,18 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+const passthroughImageLoader = ({ src }: { src: string }) => src;
 
 export interface StylePreviewData {
   id: string;
   name: string;
   content?: string;
   prompt?: string;
+  previewImageUrl?: string | null;
 }
 
 export default function StylePreviewModal({
@@ -73,6 +77,19 @@ export default function StylePreviewModal({
           </div>
         </div>
         <div className="overflow-y-auto p-6" style={{ maxHeight: "calc(80vh - 72px)" }}>
+          {style.previewImageUrl ? (
+            <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-muted">
+              <Image
+                src={style.previewImageUrl}
+                alt={style.name}
+                fill
+                sizes="(max-width: 1024px) 100vw, 800px"
+                loader={passthroughImageLoader}
+                unoptimized
+                className="object-cover"
+              />
+            </div>
+          ) : null}
           <div className="markdown-prose prose prose-sm max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {displayContent}

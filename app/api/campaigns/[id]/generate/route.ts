@@ -24,7 +24,9 @@ interface Combo {
     imageUrl2: string | null;
   };
   idea: string;
-  stylePrompt: string;
+  styleType: "library" | "uploaded";
+  stylePrompt: string | null;
+  styleReferenceImageUrl: string | null;
 }
 
 /**
@@ -111,7 +113,10 @@ export async function POST(
             imageUrl2: cp.product.imageUrl2,
           },
           idea: idea.description,
-          stylePrompt: cs.style.prompt,
+          styleType:
+            cs.styleType === "uploaded" ? "uploaded" : "library",
+          stylePrompt: cs.style?.prompt ?? null,
+          styleReferenceImageUrl: cs.uploadedImageUrl ?? null,
         });
       }
     }
@@ -146,27 +151,46 @@ export async function POST(
             productImages.push(await toReplicateImage(task.product.imageUrl2));
           }
 
+          const geminiImages = [...productImages];
+          if (task.styleType === "uploaded" && task.styleReferenceImageUrl) {
+            geminiImages.push(await toReplicateImage(task.styleReferenceImageUrl));
+          }
+
+          const styleSection =
+            task.styleType === "uploaded"
+              ? [
+                  "## Style Reference",
+                  "The final image attached is a reference advertisement that defines the target visual style.",
+                  "Analyze that reference image for composition, lighting, color treatment, typography treatment, layout rhythm, textures, depth, and mood.",
+                  "Transfer only the visual style from the reference image. Do not copy the specific product, brand, or text from the reference image.",
+                  "",
+                ].join("\n")
+              : [
+                  "## Style Guide",
+                  task.stylePrompt ?? "",
+                  "",
+                ].join("\n");
+
           // Step 1: Gemini 3 Flash — generate image prompt JSON
           const geminiPrompt = [
-            "## Style Guide",
-            task.stylePrompt,
-            "",
+            styleSection,
             "## Product",
             `Title: ${task.product.name}`,
             `Description: ${task.product.description}`,
             "",
             "## Campaign Idea",
             task.idea,
-            "",            "## Product",
-            `Title: ${task.product.name}`,
-            `Description: ${task.product.description}`,
+            "",
+            task.styleType === "uploaded"
+              ? "The first one or two images are the product images. The final image is the style reference."
+              : "The attached image(s) are the product images.",
             "",
             "Generate the creative direction JSON:",
           ].join("\n");
 
           const geminiInput = {
             prompt: geminiPrompt,
-            images: productImages,
+            images: geminiImages,
             temperature: 0.7,
             thinking_level: "low",
             max_output_tokens: 2048,

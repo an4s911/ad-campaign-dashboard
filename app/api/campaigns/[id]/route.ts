@@ -1,6 +1,74 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+function normalizeCampaignStyles(
+  input: unknown
+): Array<{
+  styleType: "library" | "uploaded";
+  styleId: string | null;
+  uploadedImageUrl: string | null;
+}> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.reduce<
+    Array<{
+      styleType: "library" | "uploaded";
+      styleId: string | null;
+      uploadedImageUrl: string | null;
+    }>
+  >((accumulator, item) => {
+    if (typeof item === "string" && item.trim()) {
+      accumulator.push({
+        styleType: "library",
+        styleId: item.trim(),
+        uploadedImageUrl: null,
+      });
+      return accumulator;
+    }
+
+    if (!item || typeof item !== "object") {
+      return accumulator;
+    }
+
+    const styleType =
+      (item as { styleType?: string }).styleType === "uploaded"
+        ? "uploaded"
+        : "library";
+    const styleId =
+      typeof (item as { styleId?: string }).styleId === "string" &&
+      (item as { styleId?: string }).styleId?.trim()
+        ? (item as { styleId: string }).styleId.trim()
+        : null;
+    const uploadedImageUrl =
+      typeof (item as { uploadedImageUrl?: string }).uploadedImageUrl ===
+        "string" &&
+      (item as { uploadedImageUrl?: string }).uploadedImageUrl?.trim()
+        ? (item as { uploadedImageUrl: string }).uploadedImageUrl.trim()
+        : null;
+
+    if (styleType === "uploaded" && uploadedImageUrl) {
+      accumulator.push({
+        styleType: "uploaded",
+        styleId: null,
+        uploadedImageUrl,
+      });
+      return accumulator;
+    }
+
+    if (styleId) {
+      accumulator.push({
+        styleType: "library",
+        styleId,
+        uploadedImageUrl: null,
+      });
+    }
+
+    return accumulator;
+  }, []);
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -64,6 +132,7 @@ export async function PUT(
       ideas,
       styles,
     } = body;
+    const normalizedStyles = normalizeCampaignStyles(styles);
 
     const campaign = await prisma.$transaction(async (tx) => {
       await tx.campaign.update({
@@ -113,11 +182,13 @@ export async function PUT(
 
       if (styles !== undefined) {
         await tx.campaignStyle.deleteMany({ where: { campaignId: id } });
-        if (Array.isArray(styles) && styles.length > 0) {
+        if (normalizedStyles.length > 0) {
           await tx.campaignStyle.createMany({
-            data: styles.map((styleId: string) => ({
+            data: normalizedStyles.map((style) => ({
               campaignId: id,
-              styleId,
+              styleId: style.styleId,
+              styleType: style.styleType,
+              uploadedImageUrl: style.uploadedImageUrl,
             })),
           });
         }

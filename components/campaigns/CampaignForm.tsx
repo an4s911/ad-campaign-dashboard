@@ -8,6 +8,7 @@ import MutualExclusionPills from "@/components/campaigns/MutualExclusionPills";
 import LocationTargeting, { TargetLocation } from "@/components/campaigns/LocationTargeting";
 import StyleCard from "@/components/styles/StyleCard";
 import StylePreviewModal, { StylePreviewData } from "@/components/styles/StylePreviewModal";
+import ImageDropzone from "@/components/ui/ImageDropzone";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 
 interface Product {
@@ -32,6 +33,13 @@ interface Style {
   id: string;
   name: string;
   prompt: string;
+  previewImageUrl?: string | null;
+}
+
+interface UploadedStyleReference {
+  id: string;
+  styleType: "uploaded";
+  uploadedImageUrl: string;
 }
 
 interface CampaignFormProps {
@@ -108,6 +116,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   const [ideas, setIdeas] = useState<string[]>([""]);
   const [allStyles, setAllStyles] = useState<Style[]>([]);
   const [selectedStyleIds, setSelectedStyleIds] = useState<string[]>([]);
+  const [uploadedStyleReferences, setUploadedStyleReferences] = useState<UploadedStyleReference[]>([]);
   const [previewStyle, setPreviewStyle] = useState<StylePreviewData | null>(null);
   const [stylesLoading, setStylesLoading] = useState(true);
   const [savedCampaignId, setSavedCampaignId] = useState<string | null>(campaignId);
@@ -172,6 +181,11 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     [ideas]
   );
 
+  const totalStyleSelections = useMemo(
+    () => selectedStyleIds.length + uploadedStyleReferences.length,
+    [selectedStyleIds.length, uploadedStyleReferences.length]
+  );
+
   // Real-time validation for generate button
   const canGenerate = useMemo(() => {
     if (!name.trim()) return false;
@@ -180,10 +194,10 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     if (selectedProductIds.length > adCount) return false;
     if (activeIdeas.length === 0) return false;
     if (activeIdeas.length > adCount) return false;
-    if (selectedStyleIds.length === 0) return false;
-    if (selectedStyleIds.length > adCount) return false;
+    if (totalStyleSelections === 0) return false;
+    if (totalStyleSelections > adCount) return false;
     return true;
-  }, [name, adCount, selectedProductIds.length, activeIdeas.length, selectedStyleIds.length]);
+  }, [name, adCount, selectedProductIds.length, activeIdeas.length, totalStyleSelections]);
 
   // Validation hint message for disabled generate button
   const generateHint = useMemo(() => {
@@ -193,10 +207,10 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     if (selectedProductIds.length > adCount) return `Too many products (${selectedProductIds.length}) for ${adCount} ads`;
     if (activeIdeas.length === 0) return "Add at least one idea";
     if (activeIdeas.length > adCount) return `Too many active ideas (${activeIdeas.length}) for ${adCount} ads`;
-    if (selectedStyleIds.length === 0) return "Select at least one style";
-    if (selectedStyleIds.length > adCount) return `Too many styles (${selectedStyleIds.length}) for ${adCount} ads`;
+    if (totalStyleSelections === 0) return "Select at least one style";
+    if (totalStyleSelections > adCount) return `Too many styles (${totalStyleSelections}) for ${adCount} ads`;
     return "";
-  }, [name, adCount, selectedProductIds.length, activeIdeas.length, selectedStyleIds.length]);
+  }, [name, adCount, selectedProductIds.length, activeIdeas.length, totalStyleSelections]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -255,7 +269,29 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
             : [""]
         );
         setSelectedStyleIds(
-          data.styles.map((cs: { styleId: string }) => cs.styleId)
+          data.styles
+            .filter((cs: { styleType?: string; styleId?: string | null }) => cs.styleType !== "uploaded" && Boolean(cs.styleId))
+            .map((cs: { styleId: string }) => cs.styleId)
+        );
+        setUploadedStyleReferences(
+          data.styles
+            .filter(
+              (cs: {
+                id: string;
+                styleType?: string;
+                uploadedImageUrl?: string | null;
+              }) => cs.styleType === "uploaded" && Boolean(cs.uploadedImageUrl)
+            )
+            .map(
+              (cs: {
+                id: string;
+                uploadedImageUrl: string;
+              }) => ({
+                id: cs.id,
+                styleType: "uploaded",
+                uploadedImageUrl: cs.uploadedImageUrl,
+              })
+            )
         );
         setCampaignStatus(data.status ?? "draft");
         if (data.generatedImages?.length > 0) {
@@ -324,8 +360,8 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     if (selectedProductIds.length > adCount) errs.products = `Max ${adCount} products for ${adCount} ads`;
     if (activeIdeas.length === 0) errs.ideas = "Add at least one idea";
     if (activeIdeas.length > adCount) errs.ideas = `Max ${adCount} ideas for ${adCount} ads`;
-    if (selectedStyleIds.length === 0) errs.styles = "Select at least one style";
-    if (selectedStyleIds.length > adCount) errs.styles = `Max ${adCount} styles for ${adCount} ads`;
+    if (totalStyleSelections === 0) errs.styles = "Select at least one style";
+    if (totalStyleSelections > adCount) errs.styles = `Max ${adCount} styles for ${adCount} ads`;
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -334,8 +370,20 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     return ideas.map((i) => i.trim()).filter(Boolean);
   }
 
-  function buildStyles(): string[] {
-    return selectedStyleIds;
+  function buildStyles(): Array<
+    | { styleType: "library"; styleId: string }
+    | { styleType: "uploaded"; uploadedImageUrl: string }
+  > {
+    return [
+      ...selectedStyleIds.map((styleId) => ({
+        styleType: "library" as const,
+        styleId,
+      })),
+      ...uploadedStyleReferences.map((style) => ({
+        styleType: "uploaded" as const,
+        uploadedImageUrl: style.uploadedImageUrl,
+      })),
+    ];
   }
 
   // Handle adCount changes with auto-deselection logic
@@ -348,10 +396,14 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       setSelectedProductIds((prev) => prev.slice(0, clamped));
     }
 
-    // Auto-deselect excess styles (keep first N, i.e. deselect most recently added)
+    // Auto-deselect excess styles, prioritizing saved library selections first.
     if (selectedStyleIds.length > clamped) {
       setSelectedStyleIds((prev) => prev.slice(0, clamped));
     }
+    setUploadedStyleReferences((prev) => {
+      const remainingSlots = Math.max(0, clamped - Math.min(selectedStyleIds.length, clamped));
+      return prev.slice(0, remainingSlots);
+    });
 
     // Ideas: do NOT delete. They become visually disabled via the render logic.
   }
@@ -624,10 +676,36 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   function toggleStyle(styleId: string) {
     setSelectedStyleIds((prev) => {
       if (prev.includes(styleId)) return prev.filter((x) => x !== styleId);
-      if (prev.length >= adCount) return prev; // At limit
+      if (prev.length + uploadedStyleReferences.length >= adCount) return prev;
       return [...prev, styleId];
     });
     if (errors.styles) setErrors((e) => ({ ...e, styles: "" }));
+  }
+
+  function addUploadedStyleReference(uploadedImageUrl: string) {
+    setUploadedStyleReferences((prev) => {
+      if (selectedStyleIds.length + prev.length >= adCount) {
+        showToast(`You can select up to ${adCount} styles for ${adCount} ads`, "error");
+        return prev;
+      }
+
+      return [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          styleType: "uploaded",
+          uploadedImageUrl,
+        },
+      ];
+    });
+
+    if (errors.styles) {
+      setErrors((current) => ({ ...current, styles: "" }));
+    }
+  }
+
+  function removeUploadedStyleReference(id: string) {
+    setUploadedStyleReferences((prev) => prev.filter((style) => style.id !== id));
   }
 
   // Determine which ideas are disabled (overflow beyond adCount)
@@ -1094,7 +1172,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
               </p>
             </div>
             <span className="text-xs text-muted-foreground">
-              {selectedStyleIds.length}/{adCount} selected
+              {totalStyleSelections}/{adCount} selected
             </span>
           </div>
           {errors.styles && <p className="mb-3 text-xs text-error">{errors.styles}</p>}
@@ -1126,6 +1204,78 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
               })}
             </div>
           )}
+
+          <div className="mt-6 border-t border-border/50 pt-6">
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-foreground">
+                Or upload a reference image
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                One-off style references are used only for this campaign and
+                count toward the same style limit.
+              </p>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,280px)_1fr]">
+              <div>
+                <ImageDropzone
+                  key={uploadedStyleReferences.length}
+                  imageUrl={null}
+                  onImageUploaded={addUploadedStyleReference}
+                  aspectRatioClassName="aspect-[4/3]"
+                  previewAlt="Uploaded style reference"
+                />
+              </div>
+
+              {uploadedStyleReferences.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {uploadedStyleReferences.map((style, index) => (
+                    <div
+                      key={style.id}
+                      className="group relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-border bg-muted shadow-card"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setPreviewImageUrl(style.uploadedImageUrl)}
+                        className="relative block h-full w-full cursor-pointer"
+                      >
+                        <Image
+                          src={style.uploadedImageUrl}
+                          alt={`Uploaded reference ${index + 1}`}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 320px"
+                          loader={passthroughImageLoader}
+                          unoptimized
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                        <div className="absolute inset-x-0 bottom-0 p-4 text-left">
+                          <p className="text-base font-semibold text-white">
+                            Uploaded Reference {index + 1}
+                          </p>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeUploadedStyleReference(style.id)}
+                        aria-label={`Remove uploaded reference ${index + 1}`}
+                        className="absolute right-2 top-2 rounded-md bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                      >
+                        <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex min-h-40 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 text-center text-sm text-muted-foreground">
+                  Uploaded references will appear here and be included in style
+                  validation and generation.
+                </div>
+              )}
+            </div>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-6 shadow-card text-card-foreground">

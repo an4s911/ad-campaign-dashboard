@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+const passthroughImageLoader = ({ src }: { src: string }) => src;
 
 interface StyleData {
   id: string;
   name: string;
   content?: string;
   prompt?: string;
+  previewImageUrl?: string | null;
 }
 
 export default function StyleCard({
@@ -20,6 +24,7 @@ export default function StyleCard({
   onSelect,
   selectFromHeader,
   height,
+  previewImageOnClick,
 }: {
   style: StyleData;
   onPreview?: () => void;
@@ -29,15 +34,19 @@ export default function StyleCard({
   onSelect?: () => void;
   selectFromHeader?: boolean;
   height?: string;
+  previewImageOnClick?: boolean;
   previewTrigger?: string;
 }) {
   const hasCheckbox = selectable || showCheckbox;
   const displayContent = style.content || style.prompt || "";
+  const hasPreviewImage = Boolean(style.previewImageUrl);
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl border bg-card shadow-card transition-all duration-200 hover:shadow-card-hover ${
-        selected ? "border-primary ring-1 ring-primary/30" : "border-border"
+      className={`group relative overflow-hidden rounded-2xl border bg-card shadow-card transition-all duration-200 hover:scale-[1.015] hover:shadow-card-hover ${
+        selected
+          ? "border-primary ring-1 ring-primary/30 shadow-[0_0_0_1px_rgba(91,91,214,0.2),0_16px_40px_rgba(91,91,214,0.12)]"
+          : "border-border hover:border-primary/30 hover:shadow-[0_0_0_1px_rgba(91,91,214,0.12),0_12px_30px_rgba(15,23,42,0.1)]"
       }`}
       style={{ height: height || "auto" }}
     >
@@ -54,37 +63,80 @@ export default function StyleCard({
         </button>
       )}
 
-      {/* Content Preview */}
-      <div style={{ height: height ? `calc(${height} - 0px)` : "auto" }}>
-        {selectFromHeader && onSelect ? (
+      <div className="flex h-full flex-col" style={{ height: height ? `calc(${height} - 0px)` : "auto" }}>
+        {hasPreviewImage ? (
+          selectFromHeader && onSelect ? (
+            <button
+              type="button"
+              onClick={onSelect}
+              className="relative block aspect-[4/3] w-full overflow-hidden text-left"
+            >
+              <Image
+                src={style.previewImageUrl as string}
+                alt={style.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 400px"
+                loader={passthroughImageLoader}
+                unoptimized
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-5">
+                <h3 className="truncate text-sm font-semibold text-white">
+                  {style.name}
+                </h3>
+              </div>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={previewImageOnClick ? onPreview : undefined}
+              className={`relative block aspect-[4/3] w-full overflow-hidden text-left ${
+                previewImageOnClick ? "cursor-pointer" : "cursor-default"
+              }`}
+            >
+              <Image
+                src={style.previewImageUrl as string}
+                alt={style.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 400px"
+                loader={passthroughImageLoader}
+                unoptimized
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-5">
+                <h3 className="truncate text-sm font-semibold text-white">
+                  {style.name}
+                </h3>
+              </div>
+            </button>
+          )
+        ) : selectFromHeader && onSelect ? (
           <button
             type="button"
             onClick={onSelect}
             className="block w-full cursor-pointer px-5 pt-5 pb-3 text-left"
           >
-            <h3 className="text-sm font-semibold text-foreground truncate">{style.name}</h3>
+            <h3 className="truncate text-sm font-semibold text-foreground">{style.name}</h3>
           </button>
         ) : (
           <div className="px-5 pt-5 pb-3">
-            <h3 className="text-sm font-semibold text-foreground truncate">{style.name}</h3>
+            <h3 className="truncate text-sm font-semibold text-foreground">{style.name}</h3>
           </div>
         )}
-        <div
-          className="cursor-pointer px-5 pb-14"
-          onClick={onPreview}
-        >
-        <div className="markdown-prose prose prose-xs max-w-none text-xs text-muted-foreground pointer-events-none line-clamp-6">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {displayContent}
-          </ReactMarkdown>
-        </div>
+
+        <div className="cursor-pointer px-5 pb-14 pt-4" onClick={onPreview}>
+          <div className="markdown-prose prose prose-xs pointer-events-none max-w-none text-xs text-muted-foreground line-clamp-6">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {displayContent}
+            </ReactMarkdown>
+          </div>
         </div>
       </div>
 
-      {/* Fade overlay */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-10 h-12 bg-gradient-to-t from-card to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-10 h-12 bg-gradient-to-t from-card via-card/95 to-transparent" />
 
-      {/* Bottom actions */}
       <div className="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-border/60 bg-card px-4 py-2.5">
         <button
           onClick={onPreview}
