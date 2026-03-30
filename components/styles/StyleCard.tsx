@@ -18,6 +18,7 @@ export default function StyleCard({
   showCheckbox,
   selected,
   onSelect,
+  selectFromHeader,
   height,
 }: {
   style: StyleData;
@@ -26,6 +27,7 @@ export default function StyleCard({
   showCheckbox?: boolean;
   selected?: boolean;
   onSelect?: () => void;
+  selectFromHeader?: boolean;
   height?: string;
   previewTrigger?: string;
 }) {
@@ -53,16 +55,29 @@ export default function StyleCard({
       )}
 
       {/* Content Preview */}
-      <div
-        className="cursor-pointer p-5 pb-14"
-        onClick={onPreview}
-        style={{ height: height ? `calc(${height} - 0px)` : "auto" }}
-      >
-        <h3 className="mb-3 text-sm font-semibold text-foreground truncate">{style.name}</h3>
+      <div style={{ height: height ? `calc(${height} - 0px)` : "auto" }}>
+        {selectFromHeader && onSelect ? (
+          <button
+            type="button"
+            onClick={onSelect}
+            className="block w-full cursor-pointer px-5 pt-5 pb-3 text-left"
+          >
+            <h3 className="text-sm font-semibold text-foreground truncate">{style.name}</h3>
+          </button>
+        ) : (
+          <div className="px-5 pt-5 pb-3">
+            <h3 className="text-sm font-semibold text-foreground truncate">{style.name}</h3>
+          </div>
+        )}
+        <div
+          className="cursor-pointer px-5 pb-14"
+          onClick={onPreview}
+        >
         <div className="markdown-prose prose prose-xs max-w-none text-xs text-muted-foreground pointer-events-none line-clamp-6">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {displayContent}
           </ReactMarkdown>
+        </div>
         </div>
       </div>
 

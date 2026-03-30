@@ -870,6 +870,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                     style={style}
                     selected={isSelected}
                     onSelect={() => toggleStyle(style.id)}
+                    selectFromHeader
                     onPreview={() => setPreviewStyle(style)}
                     previewTrigger="preview-pane"
                     showCheckbox
