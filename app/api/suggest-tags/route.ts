@@ -14,7 +14,8 @@ export async function POST(request: NextRequest) {
     }
 
     const prompt = `Based on these product tags: [${currentTags.join(", ")}], suggest 5-10 related tags that are not already in the list.
-    Return ONLY a JSON array of lowercase strings. No markdown, no explanation, no other text.`;
+    Return ONLY a JSON array of lowercase strings. No markdown, no explanation, no other text.
+    Example: ["shirt", "cotton", "blue", "casual", "summer"]`;
 
     const output = await replicate.run(MODEL, {
       input: {
