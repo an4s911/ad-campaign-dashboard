@@ -30,7 +30,7 @@ export default function ImagePreviewModal({
       role="dialog"
       aria-modal="true"
       aria-label="Image preview"
-      className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fade-in overscroll-contain"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fade-in [animation-duration:180ms] overscroll-contain"
       onClick={onClose}
     >
       <button
@@ -47,7 +47,7 @@ export default function ImagePreviewModal({
       <img
         src={imageUrl}
         alt="Preview"
-        className="max-h-[85vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl animate-scale-in"
+        className="max-h-[85vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl animate-scale-in [animation-duration:160ms]"
         onClick={(e) => e.stopPropagation()}
       />
     </div>,
