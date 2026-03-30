@@ -107,21 +107,28 @@ export default function NewProductPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <ImageUpload
-              label="Image 1"
-              value={imageUrl1}
-              required
-              onChange={(url) => {
-                setImageUrl1(url);
-                if (errors.imageUrl1) setErrors((prev) => ({ ...prev, imageUrl1: "" }));
-              }}
-              error={errors.imageUrl1}
-            />
-            <ImageUpload
-              label="Image 2"
-              value={imageUrl2}
-              onChange={setImageUrl2}
-            />
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-card-foreground">
+                Image 1 <span className="text-error">*</span>
+              </label>
+              <ImageUpload
+                imageUrl={imageUrl1 ?? ""}
+                onImageUploaded={(url) => {
+                  setImageUrl1(url);
+                  if (errors.imageUrl1) setErrors((prev) => ({ ...prev, imageUrl1: "" }));
+                }}
+                onImageRemoved={() => setImageUrl1(null)}
+              />
+              {errors.imageUrl1 && <p className="mt-1 text-xs text-error">{errors.imageUrl1}</p>}
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-card-foreground">Image 2</label>
+              <ImageUpload
+                imageUrl={imageUrl2 ?? ""}
+                onImageUploaded={setImageUrl2}
+                onImageRemoved={() => setImageUrl2(null)}
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
