@@ -43,6 +43,13 @@ interface UploadedStyleReference {
   uploadedImageUrl: string;
 }
 
+interface AdTextEntry {
+  id: string;
+  productId: string;
+  text: string;
+  isEnabled: boolean;
+}
+
 interface CampaignFormProps {
   campaignId: string | null;
 }
@@ -116,7 +123,7 @@ function getCampaignSnapshot(values: {
   timeOfDay: string[];
   weather: string[];
   targetLocations: TargetLocation[];
-  ideas: string[];
+  adTexts: AdTextEntry[];
   selectedStyleIds: string[];
   uploadedStyleReferenceUrls: string[];
 }) {
@@ -145,7 +152,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   const [timeOfDay, setTimeOfDay] = useState<string[]>(["All Day"]);
   const [weather, setWeather] = useState<string[]>(["Any"]);
   const [targetLocations, setTargetLocations] = useState<TargetLocation[]>([]);
-  const [ideas, setIdeas] = useState<string[]>([""]);
+  const [adTexts, setAdTexts] = useState<AdTextEntry[]>([]);
   const [allStyles, setAllStyles] = useState<Style[]>([]);
   const [selectedStyleIds, setSelectedStyleIds] = useState<string[]>([]);
   const [uploadedStyleReferences, setUploadedStyleReferences] = useState<UploadedStyleReference[]>([]);
@@ -187,7 +194,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       timeOfDay: ["All Day"],
       weather: ["Any"],
       targetLocations: [],
-      ideas: [""],
+      adTexts: [],
       selectedStyleIds: [],
       uploadedStyleReferenceUrls: [],
     })
@@ -267,10 +274,10 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     });
   }, [derivedProductTags]);
 
-  // Count non-empty ideas
-  const activeIdeas = useMemo(
-    () => ideas.filter((i) => i.trim() !== ""),
-    [ideas]
+  // Count enabled ad text entries that have non-empty text
+  const activeAdTextCount = useMemo(
+    () => adTexts.filter((t) => t.isEnabled && t.text.trim() !== "").length,
+    [adTexts]
   );
 
   const totalStyleSelections = useMemo(
@@ -294,7 +301,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         timeOfDay,
         weather,
         targetLocations,
-        ideas,
+        adTexts,
         selectedStyleIds,
         uploadedStyleReferenceUrls: uploadedStyleReferences.map(
           (style) => style.uploadedImageUrl
@@ -315,7 +322,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       timeOfDay,
       weather,
       targetLocations,
-      ideas,
+      adTexts,
       selectedStyleIds,
       uploadedStyleReferences,
     ]
@@ -345,12 +352,11 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     if (!adCount || adCount < 1) return false;
     if (selectedProductIds.length === 0) return false;
     if (selectedProductIds.length > adCount) return false;
-    if (activeIdeas.length === 0) return false;
-    if (activeIdeas.length > adCount) return false;
+    if (activeAdTextCount === 0) return false;
     if (totalStyleSelections === 0) return false;
     if (totalStyleSelections > adCount) return false;
     return true;
-  }, [name, adCount, selectedProductIds.length, activeIdeas.length, totalStyleSelections]);
+  }, [name, adCount, selectedProductIds.length, activeAdTextCount, totalStyleSelections]);
 
   // Validation hint message for disabled generate button
   const generateHint = useMemo(() => {
@@ -358,12 +364,11 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     if (!adCount || adCount < 1) return "Set number of ads";
     if (selectedProductIds.length === 0) return "Select at least one product";
     if (selectedProductIds.length > adCount) return `Too many products (${selectedProductIds.length}) for ${adCount} ads`;
-    if (activeIdeas.length === 0) return "Add at least one idea";
-    if (activeIdeas.length > adCount) return `Too many active ideas (${activeIdeas.length}) for ${adCount} ads`;
+    if (activeAdTextCount === 0) return "Add at least one ad text entry";
     if (totalStyleSelections === 0) return "Select at least one style";
     if (totalStyleSelections > adCount) return `Too many styles (${totalStyleSelections}) for ${adCount} ads`;
     return "";
-  }, [name, adCount, selectedProductIds.length, activeIdeas.length, totalStyleSelections]);
+  }, [name, adCount, selectedProductIds.length, activeAdTextCount, totalStyleSelections]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -406,10 +411,14 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         const nextSelectedProductIds = data.products.map(
           (cp: { productId: string }) => cp.productId
         );
-        const nextIdeas =
-          data.ideas.length > 0
-            ? data.ideas.map((i: { description: string }) => i.description)
-            : [""];
+        const nextAdTexts = (data.texts ?? []).map(
+          (t: { id: string; productId: string; text: string; isEnabled: boolean }) => ({
+            id: t.id,
+            productId: t.productId,
+            text: t.text,
+            isEnabled: t.isEnabled,
+          })
+        );
         const nextSelectedStyleIds = data.styles
           .filter(
             (cs: { styleType?: string; styleId?: string | null }) =>
@@ -450,7 +459,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         setTimeOfDay(data.targetTimeOfDay ?? ["All Day"]);
         setWeather(data.targetWeather ?? ["Any"]);
         setTargetLocations(data.targetLocations ?? []);
-        setIdeas(nextIdeas);
+        setAdTexts(nextAdTexts);
         setSelectedStyleIds(nextSelectedStyleIds);
         setUploadedStyleReferences(nextUploadedReferences);
         setCampaignStatus(data.status ?? "draft");
@@ -473,7 +482,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
             timeOfDay: data.targetTimeOfDay ?? ["All Day"],
             weather: data.targetWeather ?? ["Any"],
             targetLocations: data.targetLocations ?? [],
-            ideas: nextIdeas,
+            adTexts: nextAdTexts,
             selectedStyleIds: nextSelectedStyleIds,
             uploadedStyleReferenceUrls: nextUploadedReferences.map(
               (style: UploadedStyleReference) => style.uploadedImageUrl
@@ -550,17 +559,23 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     if (!adCount || adCount < 1) errs.adCount = "Must be at least 1";
     if (selectedProductIds.length === 0) errs.products = "Select at least one product";
     if (selectedProductIds.length > adCount) errs.products = `Max ${adCount} products for ${adCount} ads`;
-    if (activeIdeas.length === 0) errs.ideas = "Add at least one idea";
-    if (activeIdeas.length > adCount) errs.ideas = `Max ${adCount} ideas for ${adCount} ads`;
+    if (activeAdTextCount === 0) errs.adTexts = "Add at least one ad text entry";
     if (totalStyleSelections === 0) errs.styles = "Select at least one style";
     if (totalStyleSelections > adCount) errs.styles = `Max ${adCount} styles for ${adCount} ads`;
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  }, [name, adCount, selectedProductIds.length, activeIdeas.length, totalStyleSelections]);
+  }, [name, adCount, selectedProductIds.length, activeAdTextCount, totalStyleSelections]);
 
-  const buildIdeas = useCallback((): string[] => {
-    return ideas.map((i) => i.trim()).filter(Boolean);
-  }, [ideas]);
+  const buildTexts = useCallback(() => {
+    return adTexts
+      .map((t, i) => ({
+        productId: t.productId,
+        text: t.text.trim(),
+        isEnabled: t.isEnabled,
+        sortOrder: i,
+      }))
+      .filter((t) => t.text);
+  }, [adTexts]);
 
   const buildStyles = useCallback((): Array<
     | { styleType: "library"; styleId: string }
@@ -595,7 +610,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       targetWeather: weather,
       targetLocations,
       productIds: selectedProductIds,
-      ideas: buildIdeas(),
+      texts: buildTexts(),
       styles: buildStyles(),
       ...(status === "active" ? { status: "active" } : {}),
     };
@@ -614,7 +629,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     weather,
     targetLocations,
     selectedProductIds,
-    buildIdeas,
+    buildTexts,
     buildStyles,
   ]);
 
@@ -660,7 +675,19 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       return prev.slice(0, remainingSlots);
     });
 
-    // Ideas: do NOT delete. They become visually disabled via the render logic.
+    // Ad texts: auto-disable from the bottom if over the new limit. Do not delete.
+    setAdTexts((prev) => {
+      let enabledCount = prev.filter((t) => t.isEnabled && t.text.trim() !== "").length;
+      if (enabledCount <= clamped) return prev;
+      const next = [...prev];
+      for (let i = next.length - 1; i >= 0 && enabledCount > clamped; i--) {
+        if (next[i].isEnabled && next[i].text.trim() !== "") {
+          next[i] = { ...next[i], isEnabled: false };
+          enabledCount--;
+        }
+      }
+      return next;
+    });
   }
 
   function handleCustomTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -923,17 +950,39 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     }
   }
 
-  function updateIdea(index: number, value: string) {
-    setIdeas((prev) => prev.map((v, i) => (i === index ? value : v)));
+  function addAdText(productId: string) {
+    const enabled = adTexts.filter((t) => t.isEnabled && t.text.trim() !== "").length;
+    setAdTexts((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        productId,
+        text: "",
+        isEnabled: enabled < adCount,
+      },
+    ]);
   }
 
-  function removeIdea(index: number) {
-    if (ideas.length <= 1) return;
-    setIdeas((prev) => prev.filter((_, i) => i !== index));
+  function updateAdText(id: string, text: string) {
+    setAdTexts((prev) => prev.map((t) => (t.id === id ? { ...t, text } : t)));
+    if (errors.adTexts) setErrors((e) => ({ ...e, adTexts: "" }));
   }
 
-  function addIdea() {
-    setIdeas((prev) => [...prev, ""]);
+  function removeAdText(id: string) {
+    setAdTexts((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  function toggleAdText(id: string) {
+    setAdTexts((prev) => {
+      const entry = prev.find((t) => t.id === id);
+      if (!entry) return prev;
+      if (entry.isEnabled) {
+        return prev.map((t) => (t.id === id ? { ...t, isEnabled: false } : t));
+      }
+      const enabledCount = prev.filter((t) => t.isEnabled && t.text.trim() !== "").length;
+      if (enabledCount >= adCount) return prev;
+      return prev.map((t) => (t.id === id ? { ...t, isEnabled: true } : t));
+    });
   }
 
   function toggleProduct(id: string) {
@@ -978,17 +1027,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
 
   function removeUploadedStyleReference(id: string) {
     setUploadedStyleReferences((prev) => prev.filter((style) => style.id !== id));
-  }
-
-  // Determine which ideas are disabled (overflow beyond adCount)
-  function isIdeaDisabled(index: number): boolean {
-    // Count non-empty ideas before and including this one
-    let activeCount = 0;
-    for (let i = 0; i <= index; i++) {
-      if (ideas[i].trim() !== "") activeCount++;
-    }
-    // This idea is disabled if it's non-empty and its active position exceeds adCount
-    return ideas[index].trim() !== "" && activeCount > adCount;
   }
 
   const completedImages = generatedImages.filter((img) => img.status === "completed");
@@ -1421,69 +1459,116 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         <section className="rounded-2xl border border-border bg-card p-6 shadow-card text-card-foreground">
           <div className="mb-4 flex items-baseline justify-between">
             <div>
-              <h2 className="mb-1 text-base font-semibold text-foreground">Campaign Ideas</h2>
-              <p className="text-sm text-muted-foreground">Describe your vision for the ad images.</p>
+              <h2 className="mb-1 text-base font-semibold text-foreground">Ad Text</h2>
+              <p className="text-sm text-muted-foreground">Text to overlay on each generated ad image (e.g. &ldquo;50% OFF&rdquo;, &ldquo;New Arrival&rdquo;).</p>
             </div>
             <span className="text-xs text-muted-foreground">
-              {activeIdeas.length}/{adCount} active
+              {activeAdTextCount}/{adCount} active
             </span>
           </div>
-          {errors.ideas && <p className="mb-3 text-xs text-error">{errors.ideas}</p>}
+          {errors.adTexts && <p className="mb-3 text-xs text-error">{errors.adTexts}</p>}
 
-          <div className="space-y-3">
-            {ideas.map((idea, index) => {
-              const disabled = isIdeaDisabled(index);
-              return (
-                <div key={index} className={`flex gap-2 ${disabled ? "opacity-50" : ""}`}>
-                  <textarea
-                    value={idea}
-                    onChange={(e) => {
-                      updateIdea(index, e.target.value);
-                      if (errors.ideas) setErrors((p) => ({ ...p, ideas: "" }));
-                    }}
-                    disabled={disabled}
-                    placeholder={`Idea ${index + 1}: Describe an ad concept\u2026`}
-                    rows={2}
-                    className={`flex-1 resize-none rounded-lg border px-3 py-2 text-sm ${
-                      disabled
-                        ? "cursor-not-allowed border-input bg-muted text-muted-foreground"
-                        : "border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    }`}
-                  />
-                  <div className="flex flex-col items-end gap-1 self-start">
-                    {disabled && (
-                      <span className="mt-1 whitespace-nowrap rounded bg-warning/10 px-2 py-0.5 text-xs text-warning">
-                        Exceeds ad limit
-                      </span>
-                    )}
-                    {ideas.length > 1 && !disabled && (
+          {selectedProductIds.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Select products above to add ad text.</p>
+          ) : (
+            <div className="space-y-5">
+              {selectedProductIds.map((productId) => {
+                const product = allProducts.find((p) => p.id === productId);
+                if (!product) return null;
+                const productEntries = adTexts.filter((t) => t.productId === productId);
+                return (
+                  <div key={productId} className="rounded-xl border border-border bg-background p-4">
+                    {/* Product header */}
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+                          <Image
+                            src={product.imageUrl1}
+                            alt={product.name}
+                            fill
+                            sizes="32px"
+                            loader={passthroughImageLoader}
+                            unoptimized
+                            className="object-cover"
+                          />
+                        </div>
+                        <p className="truncate text-sm font-medium text-foreground">{product.name}</p>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => removeIdea(index)}
-                        aria-label={`Remove idea ${index + 1}`}
-                        className="mt-1 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        onClick={() => addAdText(productId)}
+                        className="shrink-0 flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
-                        <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
+                        Add Text
                       </button>
+                    </div>
+
+                    {/* Text entries */}
+                    {productEntries.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No text entries yet. Click &ldquo;Add Text&rdquo; to add one.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {productEntries.map((entry) => {
+                          const exceedsLimit = !entry.isEnabled && entry.text.trim() !== "";
+                          return (
+                            <div
+                              key={entry.id}
+                              className={`flex items-center gap-2 ${!entry.isEnabled ? "opacity-50" : ""}`}
+                            >
+                              <input
+                                type="text"
+                                value={entry.text}
+                                onChange={(e) => updateAdText(entry.id, e.target.value)}
+                                placeholder="e.g. 50% OFF, New Arrival, Summer Collection 2026"
+                                autoComplete="off"
+                                className="flex-1 rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                              />
+                              {exceedsLimit && (
+                                <span className="shrink-0 whitespace-nowrap rounded bg-warning/10 px-2 py-0.5 text-xs text-warning">
+                                  Exceeds ad limit
+                                </span>
+                              )}
+                              {/* Enable/disable toggle */}
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={entry.isEnabled}
+                                aria-label={entry.isEnabled ? "Disable this entry" : "Enable this entry"}
+                                onClick={() => toggleAdText(entry.id)}
+                                className={`relative shrink-0 inline-flex h-5 w-9 items-center rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                                  entry.isEnabled ? "bg-primary" : "bg-muted"
+                                }`}
+                              >
+                                <span
+                                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-150 ${
+                                    entry.isEnabled ? "translate-x-4" : "translate-x-0.5"
+                                  }`}
+                                />
+                              </button>
+                              {/* Remove button */}
+                              <button
+                                type="button"
+                                onClick={() => removeAdText(entry.id)}
+                                aria-label="Remove this entry"
+                                className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                              >
+                                <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            onClick={addIdea}
-            className="mt-3 flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:opacity-90"
-          >
-            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Add Another Idea
-          </button>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-6 shadow-card text-card-foreground">

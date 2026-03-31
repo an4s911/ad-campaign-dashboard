@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       targetWeather,
       targetLocations,
       productIds,
-      ideas,
+      texts,
       styles,
     } = body;
     const normalizedStyles = normalizeCampaignStyles(styles);
@@ -181,11 +181,13 @@ export async function POST(request: NextRequest) {
         })),
       });
 
-      if (ideas && Array.isArray(ideas) && ideas.length > 0) {
-        await tx.campaignIdea.createMany({
-          data: ideas.map((description: string, index: number) => ({
+      if (texts && Array.isArray(texts) && texts.length > 0) {
+        await tx.campaignText.createMany({
+          data: texts.map((t: { productId: string; text: string; isEnabled: boolean }, index: number) => ({
             campaignId: created.id,
-            description,
+            productId: t.productId,
+            text: t.text,
+            isEnabled: t.isEnabled ?? true,
             sortOrder: index,
           })),
         });
@@ -206,7 +208,7 @@ export async function POST(request: NextRequest) {
         where: { id: created.id },
         include: {
           products: { include: { product: true } },
-          ideas: { orderBy: { sortOrder: "asc" } },
+          texts: { orderBy: { sortOrder: "asc" } },
           styles: { include: { style: true } },
         },
       });

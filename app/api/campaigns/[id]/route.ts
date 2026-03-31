@@ -80,7 +80,7 @@ export async function GET(
       where: { id },
       include: {
         products: { include: { product: true } },
-        ideas: { orderBy: { sortOrder: "asc" } },
+        texts: { orderBy: { sortOrder: "asc" } },
         styles: { include: { style: true } },
         generatedImages: {
           where: { isDeleted: false },
@@ -129,7 +129,7 @@ export async function PUT(
       targetWeather,
       targetLocations,
       productIds,
-      ideas,
+      texts,
       styles,
     } = body;
     const normalizedStyles = normalizeCampaignStyles(styles);
@@ -167,13 +167,15 @@ export async function PUT(
         }
       }
 
-      if (ideas !== undefined) {
-        await tx.campaignIdea.deleteMany({ where: { campaignId: id } });
-        if (Array.isArray(ideas) && ideas.length > 0) {
-          await tx.campaignIdea.createMany({
-            data: ideas.map((description: string, index: number) => ({
+      if (texts !== undefined) {
+        await tx.campaignText.deleteMany({ where: { campaignId: id } });
+        if (Array.isArray(texts) && texts.length > 0) {
+          await tx.campaignText.createMany({
+            data: texts.map((t: { productId: string; text: string; isEnabled: boolean }, index: number) => ({
               campaignId: id,
-              description,
+              productId: t.productId,
+              text: t.text,
+              isEnabled: t.isEnabled ?? true,
               sortOrder: index,
             })),
           });
@@ -198,7 +200,7 @@ export async function PUT(
         where: { id },
         include: {
           products: { include: { product: true } },
-          ideas: { orderBy: { sortOrder: "asc" } },
+          texts: { orderBy: { sortOrder: "asc" } },
           styles: { include: { style: true } },
           generatedImages: {
             where: { isDeleted: false },

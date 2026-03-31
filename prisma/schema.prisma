@@ -19,6 +19,7 @@ model Product {
 
   campaigns CampaignProduct[]
   tags      ProductTag[]
+  texts     CampaignText[]
 }
 
 model Tag {
@@ -64,7 +65,7 @@ model Campaign {
   updatedAt              DateTime @updatedAt
 
   products        CampaignProduct[]
-  ideas           CampaignIdea[]
+  texts           CampaignText[]
   styles          CampaignStyle[]
   generatedImages GeneratedImage[]
 }
@@ -82,15 +83,19 @@ model CampaignProduct {
   @@index([productId])
 }
 
-model CampaignIdea {
-  id          String @id @default(cuid())
-  campaignId  String
-  description String @db.Text
-  sortOrder   Int    @default(0)
+model CampaignText {
+  id         String  @id @default(cuid())
+  campaignId String
+  productId  String
+  text       String
+  isEnabled  Boolean @default(true)
+  sortOrder  Int     @default(0)
 
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
+  @@index([productId])
 }
 
 model Style {

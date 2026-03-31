@@ -23,7 +23,7 @@ interface Combo {
     imageUrl1: string;
     imageUrl2: string | null;
   };
-  idea: string;
+  adText: string;
   styleType: "library" | "uploaded";
   stylePrompt: string | null;
   styleReferenceImageUrl: string | null;
@@ -76,7 +76,7 @@ export async function POST(
       where: { id },
       include: {
         products: { include: { product: true } },
-        ideas: { orderBy: { sortOrder: "asc" } },
+        texts: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } },
         styles: { include: { style: true } },
       },
     });
@@ -89,21 +89,22 @@ export async function POST(
     return Response.json({ error: "Campaign not found" }, { status: 404 });
   }
 
-  const ideas = campaign.ideas;
+  const texts = campaign.texts;
   const styles = campaign.styles;
   const products = campaign.products;
 
-  if (ideas.length === 0 || styles.length === 0 || products.length === 0) {
+  if (texts.length === 0 || styles.length === 0 || products.length === 0) {
     return Response.json(
-      { error: "Campaign needs at least one product, one idea, and one style" },
+      { error: "Campaign needs at least one product, one ad text entry, and one style" },
       { status: 400 }
     );
   }
 
-  // Build combo queue: products × ideas × styles
+  // Build combo queue: for each product, pair its enabled text entries with each style
   const combos: Combo[] = [];
   for (const cp of products) {
-    for (const idea of ideas) {
+    const productTexts = texts.filter((t) => t.productId === cp.productId);
+    for (const text of productTexts) {
       for (const cs of styles) {
         combos.push({
           product: {
@@ -112,7 +113,7 @@ export async function POST(
             imageUrl1: cp.product.imageUrl1,
             imageUrl2: cp.product.imageUrl2,
           },
-          idea: idea.description,
+          adText: text.text,
           styleType:
             cs.styleType === "uploaded" ? "uploaded" : "library",
           stylePrompt: cs.style?.prompt ?? null,
@@ -129,7 +130,7 @@ export async function POST(
   }
 
   console.log(
-    `[generate] ${products.length} products, ${ideas.length} ideas, ${styles.length} styles, ${combos.length} combos, ${tasks.length} tasks`
+    `[generate] ${products.length} products, ${texts.length} ad texts, ${styles.length} styles, ${combos.length} combos, ${tasks.length} tasks`
   );
 
   // Stream results via SSE
@@ -178,8 +179,9 @@ export async function POST(
             `Title: ${task.product.name}`,
             `Description: ${task.product.description}`,
             "",
-            "## Campaign Idea",
-            task.idea,
+            "## Ad Overlay Text",
+            `The following text MUST appear as readable, prominent overlay text in the final ad image. Render it exactly as written — do not paraphrase, abbreviate, or rephrase it. It should be styled to be visually striking and legible against the image background.`,
+            `Text: "${task.adText}"`,
             "",
             task.styleType === "uploaded"
               ? "The first one or two images are the product images. The final image is the style reference."
@@ -223,7 +225,7 @@ export async function POST(
           }
 
           // Step 2: nano-banana — generate image
-          console.log(`[generate] task ${i}: calling nano-banana...`);
+          console.log(`[generate] task ${i}: calling nano-banana...`, imagePrompt);
 
           const imageOutput = await replicate.run(IMAGE_MODEL, {
             input: {
