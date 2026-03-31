@@ -1476,6 +1476,9 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                 const product = allProducts.find((p) => p.id === productId);
                 if (!product) return null;
                 const productEntries = adTexts.filter((t) => t.productId === productId);
+                const hasActiveTextEntry = productEntries.some(
+                  (entry) => entry.isEnabled && entry.text.trim() !== ""
+                );
                 return (
                   <div key={productId} className="rounded-xl border border-border bg-background p-4">
                     {/* Product header */}
@@ -1506,9 +1509,15 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                       </button>
                     </div>
 
+                    {!hasActiveTextEntry && (
+                      <div className="mb-3 rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning">
+                        No text entries. This product won&apos;t generate any ads.
+                      </div>
+                    )}
+
                     {/* Text entries */}
                     {productEntries.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No text entries yet. Click &ldquo;Add Text&rdquo; to add one.</p>
+                      <p className="text-xs text-muted-foreground">Click &ldquo;Add Text&rdquo; to add one.</p>
                     ) : (
                       <div className="space-y-2">
                         {productEntries.map((entry) => {
