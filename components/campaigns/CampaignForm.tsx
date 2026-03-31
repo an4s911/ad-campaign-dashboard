@@ -47,6 +47,13 @@ interface CampaignFormProps {
   campaignId: string | null;
 }
 
+type SaveIndicatorState = "hidden" | "saving" | "saved";
+type SaveCampaignOptions = {
+  status?: "draft" | "active";
+  source?: "autosave" | "manual" | "generate" | "status";
+  requireValidation?: boolean;
+};
+
 const STORE_CATEGORIES = [
   "Clothing", "Food", "Electronics", "Grocery", "Pharmacy", "Sports",
   "Home & Living", "Beauty", "Books", "Toys", "Automotive", "Pet Supplies",
@@ -92,6 +99,7 @@ const TAG_TO_CATEGORY: Record<string, string> = {
 
 const POLL_INTERVAL = 3000;
 const passthroughImageLoader = ({ src }: { src: string }) => src;
+const AUTO_SAVE_DELAY_MS = 1500;
 
 function getCampaignSnapshot(values: {
   name: string;
@@ -155,7 +163,14 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [saveIndicator, setSaveIndicator] = useState<SaveIndicatorState>("hidden");
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveIndicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastFailedAutosaveSnapshotRef = useRef<string | null>(null);
+  const saveCampaignRef = useRef<
+    ((options?: SaveCampaignOptions) => Promise<string | null>) | null
+  >(null);
   const [initialSnapshot, setInitialSnapshot] = useState(() =>
     getCampaignSnapshot({
       name: "",
@@ -178,12 +193,44 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     })
   );
 
-  function showToast(message: string, type: "error" | "success") {
+  const showToast = useCallback((message: string, type: "error" | "success") => {
     setToast({ message, type });
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 3000);
     setTimeout(() => setToast(null), 3400);
-  }
+  }, []);
+
+  const clearAutoSaveTimer = useCallback(() => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+  }, []);
+
+  const clearSaveIndicatorTimer = useCallback(() => {
+    if (saveIndicatorTimerRef.current) {
+      clearTimeout(saveIndicatorTimerRef.current);
+      saveIndicatorTimerRef.current = null;
+    }
+  }, []);
+
+  const showSavingIndicator = useCallback(() => {
+    clearSaveIndicatorTimer();
+    setSaveIndicator("saving");
+  }, [clearSaveIndicatorTimer]);
+
+  const showSavedIndicator = useCallback(() => {
+    clearSaveIndicatorTimer();
+    setSaveIndicator("saved");
+    saveIndicatorTimerRef.current = setTimeout(() => {
+      setSaveIndicator("hidden");
+    }, 1600);
+  }, [clearSaveIndicatorTimer]);
+
+  const hideSaveIndicator = useCallback(() => {
+    clearSaveIndicatorTimer();
+    setSaveIndicator("hidden");
+  }, [clearSaveIndicatorTimer]);
 
   // Derived tags from selected products (deduplicated, sorted)
   const derivedProductTags = useMemo(() => {
@@ -275,6 +322,22 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   );
   const { clearUnsavedChanges, allowNavigation, guardedPush } =
     useUnsavedChangesGuard(!loadingCampaign && currentSnapshot !== initialSnapshot);
+  const canAutoSave = useMemo(() => {
+    if (loadingCampaign) return false;
+    if (saving || generating || activating) return false;
+    return Boolean(savedCampaignId);
+  }, [
+    loadingCampaign,
+    saving,
+    generating,
+    activating,
+    savedCampaignId,
+  ]);
+  const canCreateDraft = useMemo(
+    () => Boolean(name.trim()) && adCount > 0 && selectedProductIds.length > 0,
+    [name, adCount, selectedProductIds.length]
+  );
+  const hasUnsavedChanges = !loadingCampaign && currentSnapshot !== initialSnapshot;
 
   // Real-time validation for generate button
   const canGenerate = useMemo(() => {
@@ -311,7 +374,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     } finally {
       setProductsLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   const fetchStyles = useCallback(async () => {
     try {
@@ -322,7 +385,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     } finally {
       setStylesLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     fetchProducts();
@@ -423,7 +486,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         setLoadingCampaign(false);
       }
     })();
-  }, [campaignId]);
+  }, [campaignId, showToast]);
 
   // Polling fallback for old-style images with replicatePredictionId
   const hasPending = generatedImages.some((img) => img.status === "pending");
@@ -474,7 +537,14 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [previewImageUrl]);
 
-  function validate(): boolean {
+  useEffect(() => {
+    return () => {
+      clearAutoSaveTimer();
+      clearSaveIndicatorTimer();
+    };
+  }, [clearAutoSaveTimer, clearSaveIndicatorTimer]);
+
+  const validate = useCallback((): boolean => {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = "Campaign name is required";
     if (!adCount || adCount < 1) errs.adCount = "Must be at least 1";
@@ -486,16 +556,16 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     if (totalStyleSelections > adCount) errs.styles = `Max ${adCount} styles for ${adCount} ads`;
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  }
+  }, [name, adCount, selectedProductIds.length, activeIdeas.length, totalStyleSelections]);
 
-  function buildIdeas(): string[] {
+  const buildIdeas = useCallback((): string[] => {
     return ideas.map((i) => i.trim()).filter(Boolean);
-  }
+  }, [ideas]);
 
-  function buildStyles(): Array<
+  const buildStyles = useCallback((): Array<
     | { styleType: "library"; styleId: string }
     | { styleType: "uploaded"; uploadedImageUrl: string }
-  > {
+  > => {
     return [
       ...selectedStyleIds.map((styleId) => ({
         styleType: "library" as const,
@@ -506,9 +576,9 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         uploadedImageUrl: style.uploadedImageUrl,
       })),
     ];
-  }
+  }, [selectedStyleIds, uploadedStyleReferences]);
 
-  function buildPayload(status?: "draft" | "active") {
+  const buildPayload = useCallback((status?: "draft" | "active") => {
     return {
       name: name.trim(),
       adCount,
@@ -529,7 +599,47 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       styles: buildStyles(),
       ...(status === "active" ? { status: "active" } : {}),
     };
-  }
+  }, [
+    name,
+    adCount,
+    storeCategories,
+    ageMin,
+    ageMax,
+    gender,
+    productTags,
+    incomeLevel,
+    shoppingBehavior,
+    targetDays,
+    timeOfDay,
+    weather,
+    targetLocations,
+    selectedProductIds,
+    buildIdeas,
+    buildStyles,
+  ]);
+
+  useEffect(() => {
+    if (!canAutoSave || currentSnapshot === initialSnapshot) {
+      clearAutoSaveTimer();
+      return;
+    }
+
+    if (lastFailedAutosaveSnapshotRef.current === currentSnapshot) {
+      return;
+    }
+
+    clearAutoSaveTimer();
+    autoSaveTimerRef.current = setTimeout(() => {
+      void saveCampaignRef.current?.({
+        source: "autosave",
+        requireValidation: false,
+      });
+    }, AUTO_SAVE_DELAY_MS);
+
+    return () => {
+      clearAutoSaveTimer();
+    };
+  }, [canAutoSave, currentSnapshot, initialSnapshot, clearAutoSaveTimer]);
 
   // Handle adCount changes with auto-deselection logic
   function handleAdCountChange(newValue: number) {
@@ -571,9 +681,18 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     setProductTags((prev) => prev.filter((t) => t !== tag));
   }
 
-  async function saveCampaign(status: "draft" | "active" = "draft") {
-    if (!validate()) return;
+  const saveCampaign = useCallback(async ({
+    status = "draft",
+    source = "manual",
+    requireValidation = true,
+  }: SaveCampaignOptions = {}): Promise<string | null> => {
+    if (requireValidation && !validate()) {
+      return null;
+    }
 
+    clearAutoSaveTimer();
+    const snapshotAtSave = currentSnapshot;
+    showSavingIndicator();
     setSaving(true);
     try {
       const res = await fetch(savedCampaignId ? `/api/campaigns/${savedCampaignId}` : "/api/campaigns", {
@@ -584,26 +703,73 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
 
       const data = await res.json();
       if (res.ok) {
-        if (!savedCampaignId) setSavedCampaignId(data.id);
-        setInitialSnapshot(currentSnapshot);
-        showToast(savedCampaignId ? "Campaign updated" : "Campaign saved as draft", "success");
+        const nextCampaignId = savedCampaignId ?? data.id;
+        if (!savedCampaignId && data.id) {
+          setSavedCampaignId(data.id);
+        }
+        lastFailedAutosaveSnapshotRef.current = null;
+        setInitialSnapshot(snapshotAtSave);
+        showSavedIndicator();
+
         if (status === "active") {
           allowNavigation(() => {
             router.push("/campaign");
           });
-          return;
+          return nextCampaignId;
+        }
+
+        if (source === "manual" && !savedCampaignId && nextCampaignId) {
+          allowNavigation(() => {
+            router.push(`/campaign/${nextCampaignId}`);
+            router.refresh();
+          });
+          return nextCampaignId;
         }
 
         clearUnsavedChanges();
+        if (source === "manual") {
+          showToast(
+            savedCampaignId ? "Campaign updated" : "Campaign saved as draft",
+            "success"
+          );
+        }
+        return nextCampaignId;
       } else {
+        if (source === "autosave") {
+          lastFailedAutosaveSnapshotRef.current = snapshotAtSave;
+        }
+        hideSaveIndicator();
         showToast(data.error || "Failed to save", "error");
+        return null;
       }
     } catch {
+      if (source === "autosave") {
+        lastFailedAutosaveSnapshotRef.current = snapshotAtSave;
+      }
+      hideSaveIndicator();
       showToast("Failed to save campaign", "error");
+      return null;
     } finally {
       setSaving(false);
     }
-  }
+  }, [
+    validate,
+    currentSnapshot,
+    savedCampaignId,
+    buildPayload,
+    clearAutoSaveTimer,
+    allowNavigation,
+    router,
+    clearUnsavedChanges,
+    hideSaveIndicator,
+    showSavedIndicator,
+    showSavingIndicator,
+    showToast,
+  ]);
+
+  useEffect(() => {
+    saveCampaignRef.current = saveCampaign;
+  }, [saveCampaign]);
 
   async function handleGenerate() {
     if (!validate()) return;
@@ -615,28 +781,14 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     const needsSave = !targetId || currentSnapshot !== initialSnapshot;
 
     if (needsSave) {
-      setSaving(true);
-      try {
-        const res = await fetch(targetId ? `/api/campaigns/${targetId}` : "/api/campaigns", {
-          method: targetId ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(buildPayload()),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          showToast(data.error || "Failed to save before generation", "error");
-          return;
-        }
-        targetId = targetId ?? data.id;
-        setSavedCampaignId(targetId);
-        setInitialSnapshot(currentSnapshot);
-        clearUnsavedChanges();
-      } catch {
-        showToast("Failed to save before generation", "error");
+      const savedCampaignTargetId = await saveCampaign({
+        source: "generate",
+        requireValidation: false,
+      });
+      if (!savedCampaignTargetId) {
         return;
-      } finally {
-        setSaving(false);
       }
+      targetId = savedCampaignTargetId;
     }
 
     if (!targetId) return;
@@ -736,23 +888,23 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
     }
   }
 
-  async function handleActivate() {
-    if (!validate()) return;
-    setActivating(true);
-    try {
-      await saveCampaign("active");
-      showToast("Campaign activated!", "success");
-    } catch {
-      showToast("Failed to activate campaign", "error");
-    } finally {
-      setActivating(false);
-    }
-  }
-
   async function handleToggleStatus() {
     if (!savedCampaignId) return;
-    const newStatus = campaignStatus === "active" ? "disabled" : "active";
+
+    setActivating(true);
     try {
+      if (hasUnsavedChanges) {
+        const savedCampaignTargetId = await saveCampaign({
+          source: "status",
+          requireValidation: false,
+        });
+
+        if (!savedCampaignTargetId) {
+          return;
+        }
+      }
+
+      const newStatus = campaignStatus === "active" ? "disabled" : "active";
       const res = await fetch(`/api/campaigns/${savedCampaignId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -766,6 +918,8 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
       }
     } catch {
       showToast("Failed to update status", "error");
+    } finally {
+      setActivating(false);
     }
   }
 
@@ -843,6 +997,40 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
 
   return (
     <div className="mx-auto max-w-4xl animate-fade-in">
+      <div
+        aria-live="polite"
+        className={`pointer-events-none fixed left-1/2 top-4 z-50 transition-all duration-300 ${
+          saveIndicator === "hidden"
+            ? "-translate-x-1/2 -translate-y-4 opacity-0"
+            : "-translate-x-1/2 translate-y-0 opacity-100"
+        }`}
+      >
+        <div
+          className={`flex h-11 w-11 items-center justify-center rounded-full border shadow-lg backdrop-blur-xl ${
+            saveIndicator === "saved"
+              ? "border-success/25 bg-success/12 text-success"
+              : "border-primary/20 bg-card/95 text-foreground"
+          }`}
+        >
+          {saveIndicator === "saving" ? (
+            <>
+              <svg aria-hidden="true" className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span className="sr-only">Saving campaign</span>
+            </>
+          ) : saveIndicator === "saved" ? (
+            <>
+              <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+              <span className="sr-only">Campaign saved</span>
+            </>
+          ) : null}
+        </div>
+      </div>
+
       {/* Toast */}
       <div
         aria-live="polite"
@@ -869,28 +1057,47 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
           </h1>
         </div>
 
-        {isEditing && savedCampaignId && (
-          <div className="ml-auto flex items-center gap-3">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              campaignStatus === "active" ? "bg-success/10 text-success" :
-              campaignStatus === "disabled" ? "bg-warning/10 text-warning" :
-              "bg-muted text-muted-foreground"
-            }`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${
-                campaignStatus === "active" ? "bg-success" :
-                campaignStatus === "disabled" ? "bg-warning" :
-                "bg-muted-foreground"
-              }`} />
-              {campaignStatus === "active" ? "Active" : campaignStatus === "disabled" ? "Disabled" : "Draft"}
-            </span>
-            {campaignStatus !== "draft" && (
+        <div className="ml-auto flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() =>
+              void saveCampaign({
+                source: "manual",
+                requireValidation: false,
+              })
+            }
+            disabled={
+              savedCampaignId
+                ? !hasUnsavedChanges || !canAutoSave || saving || generating || activating
+                : !canCreateDraft || saving || generating || activating
+            }
+            className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {saving ? "Saving…" : savedCampaignId ? "Save" : "Create"}
+          </button>
+
+          {savedCampaignId ? (
+            <>
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                campaignStatus === "active" ? "bg-success/10 text-success" :
+                campaignStatus === "disabled" ? "bg-warning/10 text-warning" :
+                "bg-muted text-muted-foreground"
+              }`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${
+                  campaignStatus === "active" ? "bg-success" :
+                  campaignStatus === "disabled" ? "bg-warning" :
+                  "bg-muted-foreground"
+                }`} />
+                {campaignStatus === "active" ? "Active" : campaignStatus === "disabled" ? "Disabled" : "Draft"}
+              </span>
               <button
                 type="button"
                 role="switch"
                 aria-checked={campaignStatus === "active"}
                 aria-label="Toggle campaign status"
                 onClick={handleToggleStatus}
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                disabled={activating || saving || generating}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
                   campaignStatus === "active" ? "bg-success" : "bg-muted"
                 }`}
               >
@@ -900,9 +1107,9 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   }`}
                 />
               </button>
-            )}
-          </div>
-        )}
+            </>
+          ) : null}
+        </div>
       </div>
 
       <div className="space-y-8">
@@ -1397,35 +1604,42 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-6 shadow-card text-card-foreground">
-          <h2 className="mb-4 text-base font-semibold text-foreground">Generate & Review</h2>
+          <div className="mb-6 flex flex-col gap-4">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Generate & Review</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Autosave keeps this draft updated. Generate ads from the latest saved state.
+              </p>
+            </div>
 
-          <div>
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={generating || saving || !canGenerate}
-              className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.12)] transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:hover:brightness-100"
-            >
-              {generating ? (
-                <>
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Generating {generateDone}/{generateTotal}...
-                </>
-              ) : (
-                <>
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-                  </svg>
-                  {generatedImages.length > 0 ? `Generate ${adCount} More` : `Generate ${adCount} Ads`}
-                </>
+            <div>
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={generating || saving || !canGenerate}
+                className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.12)] transition-all duration-150 hover:brightness-110 disabled:opacity-40 disabled:hover:brightness-100"
+              >
+                {generating ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Generating {generateDone}/{generateTotal}...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                    </svg>
+                    {generatedImages.length > 0 ? `Generate ${adCount} More` : `Generate ${adCount} Ads`}
+                  </>
+                )}
+              </button>
+              {!canGenerate && !generating && generateHint && (
+                <p className="mt-2 text-xs text-muted-foreground">{generateHint}</p>
               )}
-            </button>
-            {!canGenerate && !generating && generateHint && (
-              <p className="mt-2 text-xs text-muted-foreground">{generateHint}</p>
-            )}
+            </div>
           </div>
 
           {/* Progress indicator during SSE generation */}
@@ -1530,31 +1744,6 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
             </div>
           )}
 
-          <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-border/50 pt-6">
-            <button
-              type="button"
-              onClick={() => guardedPush("/campaign")}
-              className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:bg-muted"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => saveCampaign()}
-              disabled={saving}
-              className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:bg-muted disabled:opacity-40"
-            >
-              {saving ? "Saving\u2026" : isEditing ? "Update Campaign" : "Save as Draft"}
-            </button>
-            <button
-              type="button"
-              onClick={handleActivate}
-              disabled={activating || saving}
-              className="rounded-xl bg-success px-5 py-2.5 text-sm font-medium text-success-foreground shadow-[0_1px_2px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.12)] transition-all duration-150 hover:brightness-110 disabled:opacity-40"
-            >
-              {activating ? "Activating\u2026" : isEditing ? "Update & Activate" : "Create Campaign"}
-            </button>
-          </div>
         </section>
       </div>
       <StylePreviewModal
