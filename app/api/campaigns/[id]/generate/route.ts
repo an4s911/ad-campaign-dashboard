@@ -11,6 +11,10 @@ const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
 const TEXT_MODEL = "google/gemini-3-flash";
 const IMAGE_MODEL = "google/nano-banana-pro";
+// Keep Gemini behavior pinned to the intended contract instead of relying on
+// the freeform user prompt alone.
+const GEMINI_SYSTEM_INSTRUCTION =
+  'You are receiving a product image, product details, a text overlay to include in the image, and a style system prompt. Follow the style system prompt exactly to generate a JSON formatted image generation prompt. The text overlay must appear prominently in the generated image as readable text. Return only the JSON object as specified by the style system prompt, no markdown fences, no explanation.';
 
 /** Module-level cache: local file path → { url, expiry }. Replicate files expire after 24h. */
 const REPLICATE_FILE_TTL = 23 * 60 * 60 * 1000; // 23 hours (1h safety margin)
@@ -27,6 +31,16 @@ interface Combo {
   styleType: "library" | "uploaded";
   stylePrompt: string | null;
   styleReferenceImageUrl: string | null;
+}
+
+interface GeminiPromptJson {
+  label?: string;
+  prompt?: string;
+  negative_prompt?: string;
+  aspect_ratio?: string;
+  use_case?: string;
+  recommended_settings?: unknown;
+  [key: string]: unknown;
 }
 
 /**
@@ -62,6 +76,36 @@ async function toReplicateImage(url: string): Promise<string> {
   const fileUrl = (file as { urls?: { get?: string } }).urls?.get ?? "";
   replicateFileCache.set(filePath, { url: fileUrl, expiresAt: Date.now() + REPLICATE_FILE_TTL });
   return fileUrl;
+}
+
+function extractModelText(output: unknown): string {
+  return typeof output === "string"
+    ? output.trim()
+    : Array.isArray(output)
+      ? output.join("").trim()
+      : String(output).trim();
+}
+
+function parseGeminiPromptJson(rawText: string): GeminiPromptJson {
+  // Gemini occasionally wraps valid JSON in code fences; normalize first, then
+  // require a real JSON object so downstream generation is deterministic.
+  const cleanedText = rawText
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+  const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+  const candidate = (jsonMatch?.[0] ?? cleanedText).trim();
+  const parsed = JSON.parse(candidate) as GeminiPromptJson;
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Gemini did not return a JSON object");
+  }
+
+  if (typeof parsed.prompt !== "string" || !parsed.prompt.trim()) {
+    throw new Error("Gemini JSON response is missing a prompt field");
+  }
+
+  return parsed;
 }
 
 export async function POST(
@@ -123,6 +167,15 @@ export async function POST(
     }
   }
 
+  // Product-level text filtering can leave no valid combinations even when the
+  // campaign still has products, styles, and enabled texts overall.
+  if (combos.length === 0) {
+    return Response.json(
+      { error: "Campaign has no valid product, text, and style combinations" },
+      { status: 400 }
+    );
+  }
+
   // Cycle through combos up to adCount
   const tasks: Combo[] = [];
   for (let i = 0; i < campaign.adCount; i++) {
@@ -157,40 +210,41 @@ export async function POST(
             geminiImages.push(await toReplicateImage(task.styleReferenceImageUrl));
           }
 
-          const styleSection =
+          // Library styles already store the full style-system prompt. Uploaded
+          // references only provide an image, so Gemini must infer the style
+          // system from that reference before generating JSON output.
+          const styleSystemPrompt =
             task.styleType === "uploaded"
               ? [
-                  "## Style Reference",
-                  "The final image attached is a reference advertisement that defines the target visual style.",
-                  "Analyze that reference image for composition, lighting, color treatment, typography treatment, layout rhythm, textures, depth, and mood.",
-                  "Transfer only the visual style from the reference image. Do not copy the specific product, brand, or text from the reference image.",
-                  "",
+                  "Use the final attached image as the visual style reference for this ad.",
+                  "Infer the style system prompt from that reference image and preserve its composition, lighting, typography treatment, layout rhythm, textures, depth, and mood.",
+                  "Do not copy the reference product, brand, or exact wording from the reference image.",
                 ].join("\n")
-              : [
-                  "## Style Guide",
-                  task.stylePrompt ?? "",
-                  "",
-                ].join("\n");
+              : (task.stylePrompt ?? "").trim();
 
           // Step 1: Gemini 3 Flash — generate image prompt JSON
           const geminiPrompt = [
-            styleSection,
+            "## Product Images",
+            "The attached images are the product image inputs.",
+            task.styleType === "uploaded"
+              ? "The final attached image is the style reference."
+              : "",
+            "",
             "## Product",
             `Title: ${task.product.name}`,
             `Description: ${task.product.description}`,
             "",
-            "## Ad Overlay Text",
-            `The following text MUST appear as readable, prominent overlay text in the final ad image. Render it exactly as written — do not paraphrase, abbreviate, or rephrase it. It should be styled to be visually striking and legible against the image background.`,
-            `Text: "${task.adText}"`,
+            "## Text Entry",
+            `Literal overlay text: "${task.adText}"`,
             "",
-            task.styleType === "uploaded"
-              ? "The first one or two images are the product images. The final image is the style reference."
-              : "The attached image(s) are the product images.",
+            "## Style System Prompt",
+            styleSystemPrompt,
             "",
-            "Generate the creative direction JSON:",
+            "Return the JSON image generation prompt now.",
           ].join("\n");
 
           const geminiInput = {
+            system_instruction: GEMINI_SYSTEM_INSTRUCTION,
             prompt: geminiPrompt,
             images: geminiImages,
             temperature: 0.7,
@@ -205,33 +259,29 @@ export async function POST(
           });
 
           // Parse text output
-          const rawText = typeof textOutput === "string"
-            ? textOutput
-            : Array.isArray(textOutput)
-              ? textOutput.join("")
-              : String(textOutput);
+          const rawText = extractModelText(textOutput);
 
           console.log(`[generate] task ${i} Gemini response:`, rawText);
 
-          let imagePrompt = rawText;
-          try {
-            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              imagePrompt = parsed.prompt || rawText;
-            }
-          } catch {
-            // Use raw text as fallback prompt
-          }
+          // Preserve the full JSON response instead of collapsing everything to
+          // a single prompt string; the image model can still benefit from
+          // structured fields such as aspect_ratio.
+          const promptJson = parseGeminiPromptJson(rawText);
+          const imagePromptPayload = JSON.stringify(promptJson);
+          const aspectRatio =
+            typeof promptJson.aspect_ratio === "string" &&
+            promptJson.aspect_ratio.trim()
+              ? promptJson.aspect_ratio
+              : "match_input_image";
 
           // Step 2: nano-banana — generate image
-          console.log(`[generate] task ${i}: calling nano-banana...`, imagePrompt);
+          console.log(`[generate] task ${i}: calling nano-banana...`, imagePromptPayload);
 
           const imageOutput = await replicate.run(IMAGE_MODEL, {
             input: {
-              prompt: imagePrompt,
+              prompt: imagePromptPayload,
               image_input: productImages,
-              aspect_ratio: "match_input_image",
+              aspect_ratio: aspectRatio,
               output_format: "jpg",
             },
           });
