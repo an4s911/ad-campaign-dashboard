@@ -92,7 +92,7 @@ export default function ProductPage() {
         </div>
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-[72px] shimmer rounded-xl" style={{ animationDelay: `${i * 100}ms` }} />
+            <div key={i} className="h-18 shimmer rounded-xl" style={{ animationDelay: `${i * 100}ms` }} />
           ))}
         </div>
       </div>

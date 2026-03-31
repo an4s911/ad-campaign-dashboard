@@ -78,7 +78,7 @@ export default function StylePreviewModal({
         </div>
         <div className="overflow-y-auto p-6" style={{ maxHeight: "calc(80vh - 72px)" }}>
           {style.previewImageUrl ? (
-            <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-muted">
+            <div className="relative mb-6 aspect-video overflow-hidden rounded-2xl border border-border bg-muted">
               <Image
                 src={style.previewImageUrl}
                 alt={style.name}

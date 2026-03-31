@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, FormEvent } from "react";
+import { useMemo, useState, SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/products/ImageUpload";
 import TagSection from "@/components/products/TagSection";
@@ -56,7 +56,7 @@ export default function NewProductPage() {
     return Object.keys(newErrors).length === 0;
   }
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     if (!validate()) return;
 
@@ -158,7 +158,7 @@ export default function NewProductPage() {
                     }}
                     placeholder="Product description"
                     rows={6}
-                    className={`w-full min-h-[150px] resize-y rounded-lg border bg-background text-foreground px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
+                    className={`w-full min-h-37.5 resize-y rounded-lg border bg-background text-foreground px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
                       errors.description ? "border-error/50 bg-error/10" : "border-input"
                     }`}
                   />

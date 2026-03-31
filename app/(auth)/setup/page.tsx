@@ -13,15 +13,15 @@ export default async function SetupPage() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
       {/* Background decoration */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-[40%] -right-[20%] h-[80vh] w-[80vh] rounded-full bg-primary/[0.04] blur-3xl" />
-        <div className="absolute -bottom-[30%] -left-[20%] h-[60vh] w-[60vh] rounded-full bg-primary/[0.03] blur-3xl" />
+        <div className="absolute -top-[40%] -right-[20%] h-[80vh] w-[80vh] rounded-full bg-primary/4 blur-3xl" />
+        <div className="absolute -bottom-[30%] -left-[20%] h-[60vh] w-[60vh] rounded-full bg-primary/3 blur-3xl" />
       </div>
 
       <div className="absolute right-5 top-5 z-10">
         <ThemeToggle />
       </div>
 
-      <div className="relative w-full max-w-[400px] animate-slide-up">
+      <div className="relative w-full max-w-100 animate-slide-up">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary shadow-[0_4px_16px_rgba(91,91,214,0.3)]">
             <span className="text-lg font-bold text-primary-foreground">B</span>

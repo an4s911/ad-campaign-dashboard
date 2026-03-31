@@ -12,7 +12,7 @@ export default function DashboardPage() {
             {greeting}
           </p>
           <h1 className="text-5xl font-bold tracking-[-0.04em] text-foreground sm:text-6xl lg:text-7xl">
-            <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
               Bonmedia
             </span>
           </h1>

@@ -69,7 +69,7 @@ export default function StyleCard({
             <button
               type="button"
               onClick={onSelect}
-              className="relative block aspect-[4/3] w-full overflow-hidden text-left"
+              className="relative block aspect-4/3 w-full overflow-hidden text-left"
             >
               <Image
                 src={style.previewImageUrl as string}
@@ -80,7 +80,7 @@ export default function StyleCard({
                 unoptimized
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/20 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-5">
                 <h3 className="truncate text-sm font-semibold text-white">
                   {style.name}
@@ -91,7 +91,7 @@ export default function StyleCard({
             <button
               type="button"
               onClick={previewImageOnClick ? onPreview : undefined}
-              className={`relative block aspect-[4/3] w-full overflow-hidden text-left ${
+              className={`relative block aspect-4/3 w-full overflow-hidden text-left ${
                 previewImageOnClick ? "cursor-pointer" : "cursor-default"
               }`}
             >
@@ -104,7 +104,7 @@ export default function StyleCard({
                 unoptimized
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/20 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-5">
                 <h3 className="truncate text-sm font-semibold text-white">
                   {style.name}
@@ -135,7 +135,7 @@ export default function StyleCard({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-10 h-12 bg-gradient-to-t from-card via-card/95 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-10 h-12 bg-linear-to-t from-card via-card/95 to-transparent" />
 
       <div className="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-border/60 bg-card px-4 py-2.5">
         <button

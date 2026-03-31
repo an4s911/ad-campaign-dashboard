@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { SubmitEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ export default function SettingsPage() {
     setTimeout(() => setToast(null), 3400);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
     setErrors([]);
 

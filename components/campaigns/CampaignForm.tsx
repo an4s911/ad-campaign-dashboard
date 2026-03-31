@@ -1557,7 +1557,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   {uploadedStyleReferences.map((style, index) => (
                     <div
                       key={style.id}
-                      className="group relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-border bg-muted shadow-card"
+                      className="group relative aspect-16/10 w-full overflow-hidden rounded-2xl border border-border bg-muted shadow-card"
                     >
                       <button
                         type="button"
@@ -1573,7 +1573,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                           unoptimized
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/10 to-transparent" />
                         <div className="absolute inset-x-0 bottom-0 p-4 text-left">
                           <p className="text-base font-semibold text-white">
                             Uploaded Reference {index + 1}

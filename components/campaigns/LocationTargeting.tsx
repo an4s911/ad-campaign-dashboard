@@ -443,7 +443,7 @@ export default function LocationTargeting({
       <div className="relative">
         <div
           ref={mapContainerRef}
-          className={`w-full h-[400px] rounded-lg border border-border overflow-hidden ${
+          className={`w-full h-100 rounded-lg border border-border overflow-hidden ${
             !mapLoaded ? "bg-muted/30" : ""
           }`}
         />
