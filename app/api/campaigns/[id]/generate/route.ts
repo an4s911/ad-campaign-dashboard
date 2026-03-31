@@ -119,8 +119,17 @@ export async function POST(
     campaign = await prisma.campaign.findUnique({
       where: { id },
       include: {
-        products: { include: { product: true } },
-        texts: { where: { isEnabled: true }, orderBy: { sortOrder: "asc" } },
+        products: {
+          where: { product: { isEnabled: true } },
+          include: { product: true },
+        },
+        texts: {
+          where: {
+            isEnabled: true,
+            product: { isEnabled: true },
+          },
+          orderBy: { sortOrder: "asc" },
+        },
         styles: { include: { style: true } },
       },
     });

@@ -411,14 +411,18 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         const nextSelectedProductIds = data.products.map(
           (cp: { productId: string }) => cp.productId
         );
-        const nextAdTexts = (data.texts ?? []).map(
-          (t: { id: string; productId: string; text: string; isEnabled: boolean }) => ({
-            id: t.id,
-            productId: t.productId,
-            text: t.text,
-            isEnabled: t.isEnabled,
-          })
-        );
+        const nextAdTexts = (data.texts ?? [])
+          .filter((t: { productId: string }) =>
+            nextSelectedProductIds.includes(t.productId)
+          )
+          .map(
+            (t: { id: string; productId: string; text: string; isEnabled: boolean }) => ({
+              id: t.id,
+              productId: t.productId,
+              text: t.text,
+              isEnabled: t.isEnabled,
+            })
+          );
         const nextSelectedStyleIds = data.styles
           .filter(
             (cs: { styleType?: string; styleId?: string | null }) =>
@@ -574,8 +578,8 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         isEnabled: t.isEnabled,
         sortOrder: i,
       }))
-      .filter((t) => t.text);
-  }, [adTexts]);
+      .filter((t) => selectedProductIds.includes(t.productId) && t.text);
+  }, [adTexts, selectedProductIds]);
 
   const buildStyles = useCallback((): Array<
     | { styleType: "library"; styleId: string }
@@ -986,11 +990,15 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
   }
 
   function toggleProduct(id: string) {
-    setSelectedProductIds((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= adCount) return prev; // At limit
-      return [...prev, id];
-    });
+    if (selectedProductIds.includes(id)) {
+      setSelectedProductIds((prev) => prev.filter((x) => x !== id));
+      setAdTexts((prev) => prev.filter((text) => text.productId !== id));
+    } else {
+      setSelectedProductIds((prev) => {
+        if (prev.length >= adCount) return prev;
+        return [...prev, id];
+      });
+    }
     if (errors.products) setErrors((e) => ({ ...e, products: "" }));
   }
 

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 interface Product {
   id: string;
@@ -23,6 +24,9 @@ export default function ProductPage() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" } | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
+  const [busyProductId, setBusyProductId] = useState<string | null>(null);
+  const [pendingDisableProduct, setPendingDisableProduct] = useState<Product | null>(null);
+  const [pendingDisableCampaignCount, setPendingDisableCampaignCount] = useState(0);
 
   function showToast(message: string, type: "error" | "success") {
     setToast({ message, type });
@@ -44,24 +48,81 @@ export default function ProductPage() {
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  async function handleToggleEnabled(e: React.MouseEvent, product: Product) {
-    e.preventDefault();
-    e.stopPropagation();
-    const newEnabled = !product.isEnabled;
-    setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, isEnabled: newEnabled } : p)));
+  async function updateProductEnabled(
+    product: Product,
+    newEnabled: boolean,
+    unlinkLinkedCampaigns = false
+  ) {
+    setBusyProductId(product.id);
     try {
       const res = await fetch(`/api/products/${product.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isEnabled: newEnabled }),
+        body: JSON.stringify({ isEnabled: newEnabled, unlinkLinkedCampaigns }),
       });
+
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, isEnabled: !newEnabled } : p)));
-        showToast("Failed to update status", "error");
+        if (res.status === 409 && data?.requiresConfirmation) {
+          setPendingDisableProduct(product);
+          setPendingDisableCampaignCount(data.linkedCampaignCount ?? 0);
+          return;
+        }
+
+        showToast(data?.error || "Failed to update status", "error");
+        return;
+      }
+
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, isEnabled: newEnabled } : p))
+      );
+
+      if (!newEnabled && unlinkLinkedCampaigns && pendingDisableCampaignCount > 0) {
+        showToast(
+          `Product disabled and unlinked from ${pendingDisableCampaignCount} campaigns`,
+          "success"
+        );
+      } else {
+        showToast(newEnabled ? "Product enabled" : "Product disabled", "success");
       }
     } catch {
-      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, isEnabled: !newEnabled } : p)));
       showToast("Failed to update status", "error");
+    } finally {
+      setBusyProductId(null);
+    }
+  }
+
+  async function handleToggleEnabled(e: React.MouseEvent, product: Product) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!product.isEnabled) {
+      await updateProductEnabled(product, true);
+      return;
+    }
+
+    setBusyProductId(product.id);
+    try {
+      const res = await fetch(`/api/products/${product.id}/campaign-usage`);
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        showToast(data?.error || "Failed to update status", "error");
+        return;
+      }
+
+      const linkedCampaignCount = data?.linkedCampaignCount ?? 0;
+      if (linkedCampaignCount > 0) {
+        setPendingDisableProduct(product);
+        setPendingDisableCampaignCount(linkedCampaignCount);
+        return;
+      }
+
+      await updateProductEnabled(product, false);
+    } catch {
+      showToast("Failed to update status", "error");
+    } finally {
+      setBusyProductId(null);
     }
   }
 
@@ -198,6 +259,7 @@ export default function ProductPage() {
                     <button
                       onClick={(e) => handleToggleEnabled(e, product)}
                       aria-label={product.isEnabled ? `Disable ${product.name}` : `Enable ${product.name}`}
+                      disabled={busyProductId === product.id}
                       className="rounded-lg p-1.5 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {product.isEnabled ? (
@@ -268,6 +330,7 @@ export default function ProductPage() {
                     <button
                       onClick={(e) => handleToggleEnabled(e, product)}
                       aria-label={product.isEnabled ? "Disable" : "Enable"}
+                      disabled={busyProductId === product.id}
                       className="rounded-lg p-1 text-muted-foreground active:bg-muted"
                     >
                       <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -298,6 +361,28 @@ export default function ProductPage() {
         </>
       )}
       <ImagePreviewModal imageUrl={previewImageUrl} onClose={() => setPreviewImageUrl(null)} />
+      <ConfirmDialog
+        open={pendingDisableProduct !== null}
+        title="Disable product?"
+        description={
+          pendingDisableProduct
+            ? `Disabling "${pendingDisableProduct.name}" will unlink it from ${pendingDisableCampaignCount} campaigns and remove any ad text entries tied to it.`
+            : ""
+        }
+        confirmLabel="Disable and unlink"
+        loading={pendingDisableProduct !== null && busyProductId === pendingDisableProduct.id}
+        onClose={() => {
+          if (busyProductId) return;
+          setPendingDisableProduct(null);
+          setPendingDisableCampaignCount(0);
+        }}
+        onConfirm={async () => {
+          if (!pendingDisableProduct) return;
+          await updateProductEnabled(pendingDisableProduct, false, true);
+          setPendingDisableProduct(null);
+          setPendingDisableCampaignCount(0);
+        }}
+      />
     </div>
   );
 }

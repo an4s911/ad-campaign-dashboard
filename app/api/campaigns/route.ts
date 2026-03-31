@@ -69,6 +69,56 @@ function normalizeCampaignStyles(
   }, []);
 }
 
+function normalizeCampaignTexts(
+  input: unknown,
+  allowedProductIds: string[]
+): Array<{
+  productId: string;
+  text: string;
+  isEnabled: boolean;
+  sortOrder: number;
+}> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  const allowedSet = new Set(allowedProductIds);
+
+  return input.reduce<
+    Array<{
+      productId: string;
+      text: string;
+      isEnabled: boolean;
+      sortOrder: number;
+    }>
+  >((accumulator, item, index) => {
+    if (!item || typeof item !== "object") {
+      return accumulator;
+    }
+
+    const productId =
+      typeof (item as { productId?: string }).productId === "string"
+        ? (item as { productId: string }).productId.trim()
+        : "";
+    const text =
+      typeof (item as { text?: string }).text === "string"
+        ? (item as { text: string }).text.trim()
+        : "";
+
+    if (!productId || !allowedSet.has(productId) || !text) {
+      return accumulator;
+    }
+
+    accumulator.push({
+      productId,
+      text,
+      isEnabled: (item as { isEnabled?: boolean }).isEnabled ?? true,
+      sortOrder: index,
+    });
+    return accumulator;
+  }, []);
+}
+
 export async function GET() {
   try {
     const campaigns = await prisma.campaign.findMany({
@@ -135,10 +185,16 @@ export async function POST(request: NextRequest) {
       targetWeather,
       targetLocations,
       productIds,
-      texts,
+      texts: rawTexts,
       styles,
     } = body;
     const normalizedStyles = normalizeCampaignStyles(styles);
+    const normalizedProductIds = Array.isArray(productIds)
+      ? productIds
+          .filter((productId: unknown): productId is string => typeof productId === "string")
+          .map((productId) => productId.trim())
+          .filter(Boolean)
+      : [];
 
     if (!name || !adCount) {
       return NextResponse.json(
@@ -147,7 +203,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+    if (normalizedProductIds.length === 0) {
       return NextResponse.json(
         { error: "At least one productId is required" },
         { status: 400 }
@@ -175,20 +231,21 @@ export async function POST(request: NextRequest) {
       });
 
       await tx.campaignProduct.createMany({
-        data: productIds.map((productId: string) => ({
+        data: normalizedProductIds.map((productId) => ({
           campaignId: created.id,
           productId,
         })),
       });
 
-      if (texts && Array.isArray(texts) && texts.length > 0) {
+      const normalizedTexts = normalizeCampaignTexts(rawTexts, normalizedProductIds);
+      if (normalizedTexts.length > 0) {
         await tx.campaignText.createMany({
-          data: texts.map((t: { productId: string; text: string; isEnabled: boolean }, index: number) => ({
+          data: normalizedTexts.map((text) => ({
             campaignId: created.id,
-            productId: t.productId,
-            text: t.text,
-            isEnabled: t.isEnabled ?? true,
-            sortOrder: index,
+            productId: text.productId,
+            text: text.text,
+            isEnabled: text.isEnabled,
+            sortOrder: text.sortOrder,
           })),
         });
       }
@@ -207,8 +264,14 @@ export async function POST(request: NextRequest) {
       return tx.campaign.findUnique({
         where: { id: created.id },
         include: {
-          products: { include: { product: true } },
-          texts: { orderBy: { sortOrder: "asc" } },
+          products: {
+            where: { product: { isEnabled: true } },
+            include: { product: true },
+          },
+          texts: {
+            where: { product: { isEnabled: true } },
+            orderBy: { sortOrder: "asc" },
+          },
           styles: { include: { style: true } },
         },
       });

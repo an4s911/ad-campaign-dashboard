@@ -53,7 +53,15 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, description, imageUrl1, imageUrl2, isEnabled, tags } = body;
+    const {
+      name,
+      description,
+      imageUrl1,
+      imageUrl2,
+      isEnabled,
+      tags,
+      unlinkLinkedCampaigns,
+    } = body;
 
     // Process tags if provided
     let tagData = {};
@@ -81,34 +89,69 @@ export async function PUT(
       };
     }
 
-    const product = await prisma.product.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(description !== undefined && { description }),
-        ...(imageUrl1 !== undefined && { imageUrl1 }),
-        ...(imageUrl2 !== undefined && { imageUrl2 }),
-        ...(isEnabled !== undefined && { isEnabled }),
-        ...tagData,
-      },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        imageUrl1: true,
-        imageUrl2: true,
-        isEnabled: true,
-        createdAt: true,
-        tags: {
-          select: {
-            tag: {
-              select: {
-                name: true,
+    const shouldDisable = isEnabled === false;
+    const linkedCampaigns = shouldDisable
+      ? await prisma.campaign.findMany({
+          where: {
+            OR: [
+              { products: { some: { productId: id } } },
+              { texts: { some: { productId: id } } },
+            ],
+          },
+          select: { id: true },
+        })
+      : [];
+
+    if (
+      shouldDisable &&
+      linkedCampaigns.length > 0 &&
+      unlinkLinkedCampaigns !== true
+    ) {
+      return NextResponse.json(
+        {
+          error: "Disable confirmation required",
+          requiresConfirmation: true,
+          linkedCampaignCount: linkedCampaigns.length,
+        },
+        { status: 409 }
+      );
+    }
+
+    const product = await prisma.$transaction(async (tx) => {
+      if (shouldDisable && linkedCampaigns.length > 0) {
+        await tx.campaignText.deleteMany({ where: { productId: id } });
+        await tx.campaignProduct.deleteMany({ where: { productId: id } });
+      }
+
+      return tx.product.update({
+        where: { id },
+        data: {
+          ...(name !== undefined && { name }),
+          ...(description !== undefined && { description }),
+          ...(imageUrl1 !== undefined && { imageUrl1 }),
+          ...(imageUrl2 !== undefined && { imageUrl2 }),
+          ...(isEnabled !== undefined && { isEnabled }),
+          ...tagData,
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          imageUrl1: true,
+          imageUrl2: true,
+          isEnabled: true,
+          createdAt: true,
+          tags: {
+            select: {
+              tag: {
+                select: {
+                  name: true,
+                },
               },
             },
           },
         },
-      },
+      });
     });
 
     return NextResponse.json({
