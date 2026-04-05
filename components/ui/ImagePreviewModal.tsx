@@ -12,14 +12,19 @@ export default function ImagePreviewModal({
 }) {
   useEffect(() => {
     if (!imageUrl) return;
+
+    const previousOverflow = document.body.style.overflow;
+
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
+
     document.addEventListener("keydown", handleKeyDown);
     document.body.style.overflow = "hidden";
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
     };
   }, [imageUrl, onClose]);
 
