@@ -11,6 +11,7 @@ const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
 const TEXT_MODEL = "google/gemini-3-flash";
 const IMAGE_MODEL = "google/nano-banana-pro";
+const IMAGE_MODEL_FALLBACK = "bytedance/seedream-4.5";
 // Keep Gemini behavior pinned to the intended contract instead of relying on
 // the freeform user prompt alone.
 const GEMINI_SYSTEM_INSTRUCTION =
@@ -283,17 +284,30 @@ export async function POST(
               ? promptJson.aspect_ratio
               : "match_input_image";
 
-          // Step 2: nano-banana — generate image
+          // Step 2: nano-banana — generate image (with seedream-4.5 fallback)
           console.log(`[generate] task ${i}: calling nano-banana...`, imagePromptPayload);
 
-          const imageOutput = await replicate.run(IMAGE_MODEL, {
-            input: {
-              prompt: imagePromptPayload,
-              image_input: productImages,
-              aspect_ratio: aspectRatio,
-              output_format: "jpg",
-            },
-          });
+          let imageOutput: unknown;
+          try {
+            imageOutput = await replicate.run(IMAGE_MODEL, {
+              input: {
+                prompt: imagePromptPayload,
+                image_input: productImages,
+                aspect_ratio: aspectRatio,
+                output_format: "jpg",
+              },
+            });
+          } catch (primaryError) {
+            console.warn(`[generate] task ${i}: nano-banana failed, falling back to seedream-4.5:`, primaryError);
+            imageOutput = await replicate.run(IMAGE_MODEL_FALLBACK, {
+              input: {
+                prompt: imagePromptPayload,
+                image_input: productImages,
+                aspect_ratio: aspectRatio,
+                output_format: "jpg",
+              },
+            });
+          }
 
           // Extract URL from output
           // Replicate SDK returns FileOutput objects that have a url() method
