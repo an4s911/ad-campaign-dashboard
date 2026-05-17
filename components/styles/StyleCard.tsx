@@ -25,6 +25,8 @@ export default function StyleCard({
   selectFromHeader,
   height,
   previewImageOnClick,
+  hidePrompt,
+  hideActions,
 }: {
   style: StyleData;
   onPreview?: () => void;
@@ -36,6 +38,8 @@ export default function StyleCard({
   height?: string;
   previewImageOnClick?: boolean;
   previewTrigger?: string;
+  hidePrompt?: boolean;
+  hideActions?: boolean;
 }) {
   const hasCheckbox = selectable || showCheckbox;
   const displayContent = style.content || style.prompt || "";
@@ -43,7 +47,10 @@ export default function StyleCard({
 
   return (
     <div
+      onClick={hideActions && onSelect ? onSelect : undefined}
       className={`group relative overflow-hidden rounded-2xl border bg-card shadow-card transition-all duration-200 hover:scale-[1.015] hover:shadow-card-hover ${
+        hideActions && onSelect ? "cursor-pointer" : ""
+      } ${
         selected
           ? "border-primary ring-1 ring-primary/30 shadow-[0_0_0_1px_rgba(91,91,214,0.2),0_16px_40px_rgba(91,91,214,0.12)]"
           : "border-border hover:border-primary/30 hover:shadow-[0_0_0_1px_rgba(91,91,214,0.12),0_12px_30px_rgba(15,23,42,0.1)]"
@@ -52,7 +59,7 @@ export default function StyleCard({
     >
       {hasCheckbox && (
         <button
-          onClick={onSelect}
+          onClick={(e) => { e.stopPropagation(); onSelect?.(); }}
           className="absolute left-3 top-3 z-10 flex h-5 w-5 items-center justify-center rounded-md border border-border bg-card shadow-sm transition-colors duration-150"
         >
           {selected && (
@@ -126,34 +133,40 @@ export default function StyleCard({
           </div>
         )}
 
-        <div className="cursor-pointer px-5 pb-14 pt-4" onClick={onPreview}>
-          <div className="markdown-prose prose prose-xs pointer-events-none max-w-none text-xs text-muted-foreground line-clamp-6">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {displayContent}
-            </ReactMarkdown>
+        {!hidePrompt && (
+          <div className="cursor-pointer px-5 pb-14 pt-4" onClick={onPreview}>
+            <div className="markdown-prose prose prose-xs pointer-events-none max-w-none text-xs text-muted-foreground line-clamp-6">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {displayContent}
+              </ReactMarkdown>
+            </div>
           </div>
+        )}
+      </div>
+
+      {!hidePrompt && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-10 h-12 bg-linear-to-t from-card via-card/95 to-transparent" />
+      )}
+
+      {!hideActions && (
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-border/60 bg-card px-4 py-2.5">
+          <button
+            onClick={onPreview}
+            className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Preview
+          </button>
+          <Link
+            href={`/styles/${style.id}/edit`}
+            aria-label={`Edit ${style.name}`}
+            className="rounded-lg p-1 text-muted-foreground transition-colors duration-150 hover:text-foreground"
+          >
+            <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+            </svg>
+          </Link>
         </div>
-      </div>
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-10 h-12 bg-linear-to-t from-card via-card/95 to-transparent" />
-
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between border-t border-border/60 bg-card px-4 py-2.5">
-        <button
-          onClick={onPreview}
-          className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Preview
-        </button>
-        <Link
-          href={`/styles/${style.id}/edit`}
-          aria-label={`Edit ${style.name}`}
-          className="rounded-lg p-1 text-muted-foreground transition-colors duration-150 hover:text-foreground"
-        >
-          <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
-          </svg>
-        </Link>
-      </div>
+      )}
     </div>
   );
 }
