@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const LEAVE_MESSAGE =
   "You have unsaved changes. Leave this page and discard them?";
@@ -17,7 +18,7 @@ const LEAVE_MESSAGE =
 type UnsavedChangesContextValue = {
   isBlocked: boolean;
   setIsBlocked: (blocked: boolean) => void;
-  confirmDiscardChanges: () => boolean;
+  confirmDiscardChanges: (onConfirm?: () => void) => boolean;
   clearUnsavedChanges: () => void;
   allowNavigation: <T>(action: () => T) => T;
   guardedPush: (href: string) => void;
@@ -38,6 +39,7 @@ export function UnsavedChangesProvider({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isBlocked, setIsBlocked] = useState(false);
+  const [pendingConfirmation, setPendingConfirmation] = useState<(() => void) | null>(null);
   const isBlockedRef = useRef(false);
   const historyGuardEnabledRef = useRef(false);
   const ignoreNextPopRef = useRef(false);
@@ -52,12 +54,15 @@ export function UnsavedChangesProvider({
     ignoreNextPopRef.current = false;
   }, [pathname, searchParams]);
 
-  const confirmDiscardChanges = useCallback(() => {
+  const confirmDiscardChanges = useCallback((onConfirm?: () => void) => {
     if (!isBlockedRef.current || navigationAllowedRef.current) {
       return true;
     }
 
-    return window.confirm(LEAVE_MESSAGE);
+    if (onConfirm) {
+      setPendingConfirmation(() => onConfirm);
+    }
+    return false;
   }, []);
 
   const allowNavigation = useCallback(<T,>(action: () => T) => {
@@ -143,17 +148,15 @@ export function UnsavedChangesProvider({
 
       event.preventDefault();
 
-      if (!window.confirm(LEAVE_MESSAGE)) {
-        return;
-      }
+      setPendingConfirmation(() => () => {
+        allowNavigation(() => {
+          if (nextUrl.origin === currentUrl.origin) {
+            router.push(`${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+            return;
+          }
 
-      allowNavigation(() => {
-        if (nextUrl.origin === currentUrl.origin) {
-          router.push(`${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
-          return;
-        }
-
-        window.location.assign(anchor.href);
+          window.location.assign(anchor.href);
+        });
       });
     }
 
@@ -168,12 +171,11 @@ export function UnsavedChangesProvider({
         return;
       }
 
-      if (window.confirm(LEAVE_MESSAGE)) {
+      setPendingConfirmation(() => () => {
         allowNavigation(() => {
           window.history.back();
         });
-        return;
-      }
+      });
 
       window.history.pushState(
         {
@@ -199,7 +201,11 @@ export function UnsavedChangesProvider({
 
   const guardedPush = useCallback(
     (href: string) => {
-      if (!confirmDiscardChanges()) {
+      if (!confirmDiscardChanges(() => {
+        allowNavigation(() => {
+          router.push(href);
+        });
+      })) {
         return;
       }
 
@@ -212,7 +218,11 @@ export function UnsavedChangesProvider({
 
   const guardedReplace = useCallback(
     (href: string) => {
-      if (!confirmDiscardChanges()) {
+      if (!confirmDiscardChanges(() => {
+        allowNavigation(() => {
+          router.replace(href);
+        });
+      })) {
         return;
       }
 
@@ -225,18 +235,22 @@ export function UnsavedChangesProvider({
 
   const guardedBack = useCallback(
     (fallbackHref = "/") => {
-      if (!confirmDiscardChanges()) {
+      const goBack = () => {
+        allowNavigation(() => {
+          if (window.history.length > 1) {
+            router.back();
+            return;
+          }
+
+          router.push(fallbackHref);
+        });
+      };
+
+      if (!confirmDiscardChanges(goBack)) {
         return;
       }
 
-      allowNavigation(() => {
-        if (window.history.length > 1) {
-          router.back();
-          return;
-        }
-
-        router.push(fallbackHref);
-      });
+      goBack();
     },
     [allowNavigation, confirmDiscardChanges, router]
   );
@@ -266,6 +280,18 @@ export function UnsavedChangesProvider({
   return (
     <UnsavedChangesContext.Provider value={value}>
       {children}
+      <ConfirmDialog
+        open={pendingConfirmation !== null}
+        title="Discard changes?"
+        description={LEAVE_MESSAGE}
+        confirmLabel="Discard changes"
+        onConfirm={() => {
+          const action = pendingConfirmation;
+          setPendingConfirmation(null);
+          action?.();
+        }}
+        onClose={() => setPendingConfirmation(null)}
+      />
     </UnsavedChangesContext.Provider>
   );
 }

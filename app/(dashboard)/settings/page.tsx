@@ -65,24 +65,20 @@ export default function SettingsPage() {
         {toast?.message}
       </div>
 
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Manage your account preferences</p>
-      </div>
+      <header className="mb-10 border-b border-border pb-10">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Account</p>
+        <h1 className="mt-4 font-display text-[3rem] font-semibold leading-[0.95] tracking-[-0.05em] text-foreground md:text-[4rem]">Settings</h1>
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">Manage access without ceremony.</p>
+      </header>
 
-      <div className="max-w-lg">
-        <form onSubmit={handleSubmit} className="rounded-2xl border border-border bg-card p-6 shadow-card space-y-6">
-          <div className="flex items-center gap-3 pb-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
-              <svg aria-hidden="true" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-[15px] font-semibold text-foreground">Change Password</h2>
-              <p className="text-xs text-muted-foreground">Update your account password</p>
-            </div>
-          </div>
+      <section className="grid gap-8 md:grid-cols-[220px_1fr] md:gap-16">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">01</p>
+          <h2 className="mt-3 font-display text-2xl font-semibold tracking-[-0.03em] text-foreground">Password</h2>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">Keep account access current and clear.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="max-w-xl space-y-6 border-y border-border py-6">
 
           {errors.length > 0 && (
             <div className="animate-slide-down rounded-xl border border-error/20 bg-error/8 px-4 py-3 text-sm text-error space-y-1">
@@ -146,7 +142,7 @@ export default function SettingsPage() {
             </Button>
           </div>
         </form>
-      </div>
+      </section>
     </div>
   );
 }

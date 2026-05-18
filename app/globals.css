@@ -6,48 +6,48 @@
 
 /* ─── Light Theme ─── */
 :root {
-  --background: #F7F8FC;
-  --foreground: #0C1222;
-  --card: #FFFFFF;
-  --card-foreground: #0C1222;
-  --border: #E3E8F0;
-  --input: #E3E8F0;
-  --primary: #5B5BD6;
-  --primary-foreground: #FFFFFF;
-  --muted: #F0F2F8;
-  --muted-foreground: #6B7A99;
-  --success: #2EA043;
-  --success-foreground: #FFFFFF;
-  --error: #E5484D;
-  --error-foreground: #FFFFFF;
-  --warning: #E79D13;
-  --warning-foreground: #FFFFFF;
-  --ring: #5B5BD6;
-  --accent: #F0F2F8;
-  --sidebar: #FFFFFF;
+  --background: #F8F5F0;
+  --foreground: #17110F;
+  --card: #FFFCF7;
+  --card-foreground: #17110F;
+  --border: #E8DED3;
+  --input: #E2D7CC;
+  --primary: #8F3D2E;
+  --primary-foreground: #FFF8F2;
+  --muted: #EFE7DE;
+  --muted-foreground: #74645B;
+  --success: #2F7D53;
+  --success-foreground: #F3FBF6;
+  --error: #B33A36;
+  --error-foreground: #FFF7F5;
+  --warning: #B8792A;
+  --warning-foreground: #FFF7EA;
+  --ring: #8F3D2E;
+  --accent: #F1E2D6;
+  --sidebar: #F2ECE4;
 }
 
 /* ─── Dark Theme ─── */
 .dark {
-  --background: #0B0E17;
-  --foreground: #EAECF5;
-  --card: #13162199;
-  --card-foreground: #EAECF5;
-  --border: #1E2235;
-  --input: #1E2235;
-  --primary: #7C7CFF;
-  --primary-foreground: #FFFFFF;
-  --muted: #161A2A;
-  --muted-foreground: #7E85A0;
-  --success: #3DD68C;
-  --success-foreground: #0B2617;
-  --error: #FF6369;
-  --error-foreground: #2D0607;
-  --warning: #FFB224;
-  --warning-foreground: #2B1700;
-  --ring: #7C7CFF;
-  --accent: #161A2A;
-  --sidebar: #0E1119;
+  --background: #11100F;
+  --foreground: #F0E8DF;
+  --card: #1A1715E6;
+  --card-foreground: #F0E8DF;
+  --border: #302821;
+  --input: #3A3028;
+  --primary: #D67B62;
+  --primary-foreground: #21100B;
+  --muted: #201B17;
+  --muted-foreground: #A99B91;
+  --success: #59C08B;
+  --success-foreground: #071B11;
+  --error: #F07167;
+  --error-foreground: #250706;
+  --warning: #E4A64F;
+  --warning-foreground: #211207;
+  --ring: #D67B62;
+  --accent: #2B211C;
+  --sidebar: #151312;
 }
 
 @theme inline {
@@ -72,6 +72,7 @@
   --color-sidebar: var(--sidebar);
   --font-sans: var(--font-outfit);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
 
   /* Animations */
   --animate-fade-in: fade-in 0.5s ease-out both;
@@ -191,17 +192,6 @@ body {
   );
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
-}
-
-/* ─── Glass Effect ─── */
-.glass {
-  background: color-mix(in srgb, var(--card) 80%, transparent);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-}
-
-.dark .glass {
-  background: color-mix(in srgb, var(--card) 60%, transparent);
 }
 
 /* ─── Card Shadow System ─── */

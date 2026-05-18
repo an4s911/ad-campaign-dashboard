@@ -72,61 +72,58 @@ export default function StylesPage() {
       </div>
 
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-10 flex flex-col gap-8 border-b border-border pb-10 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">Style Guides</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{styles.length} style{styles.length !== 1 ? "s" : ""}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Visual language</p>
+          <h1 className="mt-4 font-display text-[3rem] font-semibold leading-[0.95] tracking-[-0.05em] text-foreground md:text-[4rem]">Style Guides</h1>
+          <p className="mt-4 text-sm leading-6 text-muted-foreground">{styles.length} style{styles.length !== 1 ? "s" : ""} shaping campaign output.</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setShowGenerateModal(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:bg-muted"
+            className="inline-flex h-11 items-center justify-center border border-border bg-card/55 px-5 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-muted"
           >
-            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h.008v.008H6V12Zm6 0h.008v.008H12V12Zm6 0h.008v.008H18V12ZM4.5 19.5h15a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5h-15A1.5 1.5 0 0 0 3 6v12a1.5 1.5 0 0 0 1.5 1.5Z" />
-            </svg>
-            Generate from Image
+            Generate from image
           </button>
           <Link
             href="/styles/new"
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.12)] transition-all duration-150 hover:brightness-110"
+            className="inline-flex h-11 items-center justify-center bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Add Style
+            Add style
           </Link>
         </div>
       </div>
 
       {styles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-20 shadow-card">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
-            <svg aria-hidden="true" className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 6.75h9m-9 4.5h9m-9 4.5h5.25M6.75 3.75h10.5A2.25 2.25 0 0 1 19.5 6v12a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 18V6a2.25 2.25 0 0 1 2.25-2.25Z" />
-            </svg>
-          </div>
+        <div className="flex flex-col items-center justify-center border-y border-dashed border-border py-20 text-center">
           <h3 className="mb-1 text-base font-semibold text-foreground">No style guides yet</h3>
           <p className="mb-5 text-sm text-muted-foreground">Create a style guide to define ad aesthetics.</p>
           <Link
             href="/styles/new"
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,0.1)] transition-all duration-150 hover:brightness-110"
+            className="inline-flex h-10 items-center justify-center bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Create First Style
+            Create first style
           </Link>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
-          {styles.map((style) => (
-            <StyleCard
-              key={style.id}
-              style={style}
-              onPreview={() => setPreview(style)}
-              previewImageOnClick
-            />
-          ))}
-        </div>
+        <section className="grid gap-8 md:grid-cols-[220px_1fr] md:gap-16">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">01</p>
+            <h2 className="mt-3 font-display text-2xl font-semibold tracking-[-0.03em] text-foreground">Creative register</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">Prompts stay available, but image and name lead the scan.</p>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 stagger-children">
+            {styles.map((style) => (
+              <StyleCard
+                key={style.id}
+                style={style}
+                onPreview={() => setPreview(style)}
+                previewImageOnClick
+              />
+            ))}
+          </div>
+        </section>
       )}
 
       {preview && (

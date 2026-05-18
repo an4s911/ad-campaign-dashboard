@@ -62,7 +62,7 @@ export default function StylePreviewModal({
           role="dialog"
           aria-modal="true"
           aria-label={style.name}
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in overscroll-contain"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4 animate-fade-in overscroll-contain"
           onClick={handleClose}
         >
           <div

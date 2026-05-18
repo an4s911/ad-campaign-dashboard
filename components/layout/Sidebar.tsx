@@ -98,31 +98,26 @@ export default function Sidebar({
       {/* ── Desktop Sidebar ── */}
       <aside className="hidden md:flex h-full w-65 shrink-0 flex-col border-r border-border bg-sidebar">
         {/* Brand */}
-        <div className="px-6 pt-7 pb-6">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-[0_2px_8px_rgba(91,91,214,0.35)]">
-              <span className="text-sm font-bold text-primary-foreground">B</span>
-            </div>
-            <div>
-              <h1 className="text-[15px] font-semibold tracking-[-0.02em] text-foreground">Bonmedia</h1>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Ad Dashboard</p>
-            </div>
-          </div>
+        <div className="px-6 pb-7 pt-8">
+          <Link href="/dashboard" className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <p className="font-display text-2xl font-semibold leading-none tracking-[-0.04em] text-foreground">Bonmedia</p>
+            <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Campaign atelier</p>
+          </Link>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 space-y-0.5">
-          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70">Navigation</p>
+        <nav className="flex-1 px-4 space-y-1">
+          <p className="px-3 pb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">Navigation</p>
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`group flex items-center gap-3 border-l px-3 py-2.5 text-[13px] font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   isActive
-                    ? "bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(91,91,214,0.15)]"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "border-primary bg-primary/8 text-primary"
+                    : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
                 <span className={`transition-colors duration-150 ${isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}`}>
@@ -141,19 +136,17 @@ export default function Sidebar({
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-border px-3 py-4 space-y-3">
-          <div className="flex items-center justify-between px-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted text-[11px] font-semibold text-muted-foreground uppercase">
-                {userName.charAt(0)}
-              </div>
+        <div className="border-t border-border px-4 py-4 space-y-3">
+          <div className="flex items-center justify-between px-2">
+            <div className="min-w-0">
               <p className="truncate text-[13px] font-medium text-foreground">{userName}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{userRole}</p>
             </div>
             <ThemeToggle />
           </div>
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground transition-all duration-150 hover:bg-error/8 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex w-full items-center gap-3 border-l border-transparent px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors duration-150 hover:border-error/40 hover:bg-error/8 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <svg aria-hidden="true" className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
@@ -164,7 +157,7 @@ export default function Sidebar({
       </aside>
 
       {/* ── Mobile Bottom Navigation ── */}
-      <nav className="fixed inset-x-0 bottom-0 z-50 md:hidden glass border-t border-border pb-safe">
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-sidebar/95 pb-safe md:hidden">
         <div className="flex items-center justify-around px-2 py-1.5">
           {navItems.slice(0, 5).map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);

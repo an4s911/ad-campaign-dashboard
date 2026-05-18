@@ -27,6 +27,9 @@ export default function ProductPage() {
   const [busyProductId, setBusyProductId] = useState<string | null>(null);
   const [pendingDisableProduct, setPendingDisableProduct] = useState<Product | null>(null);
   const [pendingDisableCampaignCount, setPendingDisableCampaignCount] = useState(0);
+  const [deleteCandidate, setDeleteCandidate] = useState<Product | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [query, setQuery] = useState("");
 
   function showToast(message: string, type: "error" | "success") {
     setToast({ message, type });
@@ -126,14 +129,20 @@ export default function ProductPage() {
     }
   }
 
-  async function handleDelete(e: React.MouseEvent, product: Product) {
+  function handleDelete(e: React.MouseEvent, product: Product) {
     e.preventDefault();
     e.stopPropagation();
-    if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
+    setDeleteCandidate(product);
+  }
+
+  async function confirmDelete() {
+    if (!deleteCandidate) return;
+    setDeleting(true);
     try {
-      const res = await fetch(`/api/products/${product.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/products/${deleteCandidate.id}`, { method: "DELETE" });
       if (res.ok) {
-        setProducts((prev) => prev.filter((p) => p.id !== product.id));
+        setProducts((prev) => prev.filter((p) => p.id !== deleteCandidate.id));
+        setDeleteCandidate(null);
         showToast("Product deleted", "success");
       } else {
         const data = await res.json();
@@ -141,8 +150,14 @@ export default function ProductPage() {
       }
     } catch {
       showToast("Failed to delete product", "error");
+    } finally {
+      setDeleting(false);
     }
   }
+
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(query.trim().toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -173,24 +188,36 @@ export default function ProductPage() {
       </div>
 
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-10 flex flex-col gap-8 border-b border-border pb-10 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">Products</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{products.length} product{products.length !== 1 ? "s" : ""}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Product library</p>
+          <h1 className="mt-4 font-display text-[3rem] font-semibold leading-[0.95] tracking-[-0.05em] text-foreground md:text-[4rem]">Products</h1>
+          <p className="mt-4 text-sm leading-6 text-muted-foreground">{products.length} product{products.length !== 1 ? "s" : ""} ready for campaign work.</p>
         </div>
         <Link
           href="/product/new"
-          className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.12)] transition-all duration-150 hover:brightness-110"
+          className="inline-flex h-11 items-center justify-center bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Add Product
+          Add product
         </Link>
       </div>
 
+      <div className="mb-8 grid gap-8 md:grid-cols-[220px_1fr] md:gap-16">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">01</p>
+          <h2 className="mt-3 font-display text-2xl font-semibold tracking-[-0.03em] text-foreground">Catalog scan</h2>
+        </div>
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search products"
+          className="h-12 w-full border-0 border-b border-border bg-transparent px-0 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-0"
+        />
+      </div>
+
       {products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card py-20 shadow-card">
+        <div className="flex flex-col items-center justify-center border-y border-dashed border-border py-20">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
             <svg aria-hidden="true" className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
@@ -208,20 +235,20 @@ export default function ProductPage() {
       ) : (
         <>
           {/* Desktop Table */}
-          <div className="hidden md:block overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-            <div className="grid grid-cols-[48px_1fr_1.5fr_100px_120px] items-center gap-4 border-b border-border px-5 py-3 text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
+          <div className="hidden md:block border-y border-border">
+            <div className="grid grid-cols-[56px_1fr_1.5fr_100px_120px] items-center gap-4 border-b border-border py-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               <span aria-label="Image" />
               <span>Name</span>
               <span>Description</span>
               <span>Status</span>
               <span className="text-right">Actions</span>
             </div>
-            <div className="stagger-children divide-y divide-border/60">
-              {products.map((product) => (
+            <div className="stagger-children divide-y divide-border">
+              {filteredProducts.map((product) => (
                 <Link
                   key={product.id}
                   href={`/product/${product.id}`}
-                  className="grid grid-cols-[48px_1fr_1.5fr_100px_120px] items-center gap-4 px-5 py-3 transition-colors duration-150 hover:bg-muted/50"
+                  className="grid grid-cols-[56px_1fr_1.5fr_100px_120px] items-center gap-4 py-3 transition-colors duration-150 hover:bg-muted/35"
                 >
                   <button
                     type="button"
@@ -290,11 +317,11 @@ export default function ProductPage() {
 
           {/* Mobile Cards */}
           <div className="md:hidden space-y-3 stagger-children">
-            {products.map((product) => (
+            {filteredProducts.map((product) => (
               <Link
                 key={product.id}
                 href={`/product/${product.id}`}
-                className="flex gap-3.5 rounded-2xl border border-border bg-card p-3.5 shadow-card transition-all duration-150 active:scale-[0.99]"
+                className="flex gap-3.5 border-y border-border bg-card/45 p-3.5 transition-colors duration-150 active:scale-[0.99]"
               >
                 <button
                   type="button"
@@ -360,6 +387,17 @@ export default function ProductPage() {
           </div>
         </>
       )}
+      <ConfirmDialog
+        open={deleteCandidate !== null}
+        title="Delete product?"
+        description={deleteCandidate ? `Delete "${deleteCandidate.name}"? This cannot be undone.` : ""}
+        confirmLabel="Delete product"
+        loading={deleting}
+        onClose={() => {
+          if (!deleting) setDeleteCandidate(null);
+        }}
+        onConfirm={confirmDelete}
+      />
       <ImagePreviewModal imageUrl={previewImageUrl} onClose={() => setPreviewImageUrl(null)} />
       <ConfirmDialog
         open={pendingDisableProduct !== null}

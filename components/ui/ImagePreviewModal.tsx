@@ -35,7 +35,7 @@ export default function ImagePreviewModal({
       role="dialog"
       aria-modal="true"
       aria-label="Image preview"
-      className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fade-in [animation-duration:180ms] overscroll-contain"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 p-4 animate-fade-in [animation-duration:180ms] overscroll-contain"
       onClick={onClose}
     >
       <button

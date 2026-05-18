@@ -20,44 +20,39 @@ export default async function LoginPage({
   if (userCount === 0) redirect("/setup");
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
-      {/* Background decoration */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-[40%] -right-[20%] h-[80vh] w-[80vh] rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-[30%] -left-[20%] h-[60vh] w-[60vh] rounded-full bg-primary/3 blur-3xl" />
-      </div>
-
-      {/* Theme toggle */}
-      <div className="absolute right-5 top-5 z-10">
+    <div className="min-h-screen bg-background px-4 py-6 md:px-8">
+      <div className="flex justify-end">
         <ThemeToggle />
       </div>
 
-      {/* Content */}
-      <div className="relative w-full max-w-100 animate-slide-up">
-        {/* Brand */}
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary shadow-[0_4px_16px_rgba(91,91,214,0.3)]">
-            <span className="text-lg font-bold text-primary-foreground">B</span>
-          </div>
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
-            Welcome back
+      <main className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-12 md:grid-cols-[1.1fr_420px]">
+        <section className="border-y border-border py-12">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Bonmedia</p>
+          <h1 className="mt-5 max-w-3xl font-display text-[4rem] font-semibold leading-[0.9] tracking-[-0.06em] text-foreground md:text-[6rem]">
+            Campaign work, composed.
           </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Sign in to Bonmedia Ad Dashboard
+          <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground">
+            A focused workspace for products, styles, and AI-generated advertising.
           </p>
-        </div>
+        </section>
 
-        {params.setup === "complete" && (
-          <div className="mb-4 animate-slide-down rounded-xl border border-success/20 bg-success/8 px-4 py-3 text-sm text-foreground">
-            <span className="font-medium">Account created.</span>{" "}
-            Sign in with your username and the{" "}
-            <code className="rounded bg-success/10 px-1.5 py-0.5 font-mono text-xs">SUPER_PASSWORD</code>{" "}
-            environment variable.
+        <section className="w-full">
+          {params.setup === "complete" && (
+            <div className="mb-4 border-y border-success/25 bg-success/8 px-1 py-3 text-sm text-foreground">
+              <span className="font-medium">Account created.</span>{" "}
+              Sign in with your username and the{" "}
+              <code className="bg-success/10 px-1.5 py-0.5 font-mono text-xs">SUPER_PASSWORD</code>{" "}
+              environment variable.
+            </div>
+          )}
+
+          <div className="mb-6">
+            <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-foreground">Welcome back</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Sign in to continue.</p>
           </div>
-        )}
-
-        <LoginForm from={params.from} />
-      </div>
+          <LoginForm from={params.from} />
+        </section>
+      </main>
     </div>
   );
 }

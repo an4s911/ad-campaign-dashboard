@@ -932,7 +932,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
         }`}
       >
         <div
-          className={`flex h-11 w-11 items-center justify-center rounded-full border shadow-lg backdrop-blur-xl ${
+          className={`flex h-11 w-11 items-center justify-center rounded-full border bg-card/95 ${
             saveIndicator === "saved"
               ? "border-success/25 bg-success/12 text-success"
               : "border-primary/20 bg-card/95 text-foreground"
@@ -1106,7 +1106,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                         disabled={atLimit}
                         className={`flex items-center gap-3 rounded-2xl border-2 p-3 text-left transition-all duration-150 ${
                           isSelected
-                            ? "border-primary bg-primary/8 shadow-[0_0_0_1px_rgba(91,91,214,0.15)]"
+                            ? "border-primary bg-primary/8"
                             : atLimit
                               ? "cursor-not-allowed border-border bg-muted/50 opacity-40"
                               : "border-border bg-card text-card-foreground hover:border-muted-foreground/30 hover:shadow-card"
@@ -1534,7 +1534,7 @@ export default function CampaignForm({ campaignId }: CampaignFormProps) {
                   {pendingImages.length > 0 && `, ${pendingImages.length} generating`}
                   {failedImages.length > 0 && `, ${failedImages.length} failed`}
                 </p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-[1.25fr_0.9fr_1.1fr]">
                   {generatedImages.map((img) => (
                     <div key={img.id} className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-muted">
                       {img.status === "completed" ? (

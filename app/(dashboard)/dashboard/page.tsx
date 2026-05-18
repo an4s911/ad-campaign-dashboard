@@ -181,49 +181,29 @@ function StatCard({
 
 function DashboardSkeleton() {
   return (
-    <div className="animate-fade-in space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="rounded-2xl border border-border bg-card p-5 shadow-card">
-            <div className="mb-4 h-11 w-11 shimmer rounded-2xl" />
-            <div className="h-8 w-24 shimmer rounded-lg" />
-            <div className="mt-3 h-4 w-32 shimmer rounded-lg" />
-          </div>
-        ))}
+    <div className="animate-fade-in space-y-10">
+      <div className="border-b border-border pb-10">
+        <div className="h-4 w-32 shimmer" />
+        <div className="mt-5 h-16 w-80 shimmer" />
       </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="rounded-2xl border border-border bg-card p-5 shadow-card">
-            <div className="h-5 w-40 shimmer rounded-lg" />
-            <div className="mt-5 h-72 shimmer rounded-2xl" />
-          </div>
-        ))}
+      <div className="grid gap-8 md:grid-cols-[220px_1fr] md:gap-16">
+        <div>
+          <div className="h-3 w-10 shimmer" />
+          <div className="mt-4 h-8 w-36 shimmer" />
+          <div className="mt-4 h-20 w-full shimmer" />
+        </div>
+        <div className="h-[28rem] shimmer border-y border-border" />
       </div>
-
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-        <div className="h-5 w-36 shimmer rounded-lg" />
-        <div className="mt-5 space-y-3">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="flex items-center gap-4 rounded-xl border border-border/60 p-4">
-              <div className="h-10 w-10 shimmer rounded-2xl" />
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="h-4 w-3/5 shimmer rounded-lg" />
-                <div className="h-3 w-24 shimmer rounded-lg" />
-              </div>
-            </div>
+      <div className="grid gap-8 border-t border-border pt-10 md:grid-cols-[220px_1fr] md:gap-16">
+        <div>
+          <div className="h-3 w-10 shimmer" />
+          <div className="mt-4 h-8 w-36 shimmer" />
+        </div>
+        <div className="space-y-4 border-y border-border py-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-12 shimmer" />
           ))}
         </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="rounded-2xl border border-border bg-card p-5 shadow-card">
-            <div className="h-6 w-6 shimmer rounded-lg" />
-            <div className="mt-4 h-5 w-32 shimmer rounded-lg" />
-            <div className="mt-2 h-4 w-40 shimmer rounded-lg" />
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -301,211 +281,129 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="animate-fade-in space-y-6">
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Products" value={stats.totalProducts} icon={PackageIcon} />
-        <StatCard label="Active Campaigns" value={stats.activeCampaigns} icon={MegaphoneIcon} />
-        <StatCard label="Total Ads Generated" value={stats.totalAdsGenerated} icon={ImageIcon} />
-        <StatCard label="Ads This Week" value={stats.adsThisWeek} icon={TrendingUpIcon} />
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-          <div className="mb-5 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">Ads Generated Over Time</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Last 30 days</p>
-            </div>
-            <div className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-              {numberFormatter.format(stats.totalAdsGenerated)} total
-            </div>
+    <div className="animate-fade-in space-y-12">
+      <header className="flex flex-col gap-8 border-b border-border pb-10 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Control room</p>
+          <h1 className="mt-4 font-display text-[3rem] font-semibold leading-[0.95] tracking-[-0.05em] text-foreground md:text-[4rem]">
+            Welcome back.
+          </h1>
+        </div>
+        <div className="grid grid-cols-2 gap-8 text-right">
+          <div>
+            <p className="text-3xl font-semibold tracking-[-0.04em] text-foreground">{numberFormatter.format(stats.activeCampaigns)}</p>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Active campaigns</p>
           </div>
+          <div>
+            <p className="text-3xl font-semibold tracking-[-0.04em] text-foreground">{numberFormatter.format(stats.adsThisWeek)}</p>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Ads this week</p>
+          </div>
+        </div>
+      </header>
 
-          <div className="h-72">
+      <section className="grid gap-8 md:grid-cols-[220px_1fr] md:gap-16">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">01</p>
+          <h2 className="mt-3 font-display text-2xl font-semibold tracking-[-0.03em] text-foreground">Production rhythm</h2>
+          <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground">Generated ads across the last 30 days. The shape matters more than the count.</p>
+        </div>
+        <div className="border-y border-border bg-card/45 px-2 py-6 md:px-6">
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-foreground">Ads generated over time</p>
+            <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+              {numberFormatter.format(stats.totalAdsGenerated)} total
+            </span>
+          </div>
+          <div className="h-[28rem]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={stats.adsPerDay}
-                margin={{ top: 10, right: 8, left: -18, bottom: 0 }}
-              >
+              <AreaChart data={stats.adsPerDay} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
                 <defs>
                   <linearGradient id="adsAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.42} />
-                    <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.03} />
+                    <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.36} />
+                    <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.35} />
-                <XAxis
-                  axisLine={false}
-                  dataKey="date"
-                  minTickGap={28}
-                  tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-                  tickFormatter={formatChartDay}
-                  tickLine={false}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  axisLine={false}
-                  tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-                  tickLine={false}
-                  width={32}
-                />
+                <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.55} />
+                <XAxis axisLine={false} dataKey="date" minTickGap={28} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} tickFormatter={formatChartDay} tickLine={false} />
+                <YAxis allowDecimals={false} axisLine={false} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} tickLine={false} width={32} />
                 <Tooltip
                   cursor={{ stroke: "var(--primary)", strokeOpacity: 0.2 }}
-                  contentStyle={{
-                    backgroundColor: "var(--card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 16,
-                    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.18)",
-                    color: "var(--foreground)",
-                  }}
+                  contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: 0, boxShadow: "none", color: "var(--foreground)" }}
                   formatter={(value) => formatTooltipValue(value, "Generated")}
-                  labelFormatter={(label) =>
-                    typeof label === "string" ? formatChartDay(label) : ""
-                  }
+                  labelFormatter={(label) => (typeof label === "string" ? formatChartDay(label) : "")}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="count"
-                  stroke="var(--primary)"
-                  strokeWidth={2.5}
-                  fill="url(#adsAreaGradient)"
-                  activeDot={{ r: 4, strokeWidth: 0, fill: "var(--primary)" }}
-                />
+                <Area type="monotone" dataKey="count" stroke="var(--primary)" strokeWidth={2.5} fill="url(#adsAreaGradient)" activeDot={{ r: 4, strokeWidth: 0, fill: "var(--primary)" }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
+      </section>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-          <div className="mb-5 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">Campaigns by Status</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Current distribution</p>
-            </div>
-            <div className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-              {numberFormatter.format(
-                stats.campaignsByStatus.active +
-                  stats.campaignsByStatus.draft +
-                  stats.campaignsByStatus.disabled
-              )}{" "}
-              campaigns
-            </div>
-          </div>
-
-          <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
-            <div className="space-y-3">
-              {campaignChartData.map((item) => (
-                <div
-                  key={item.key}
-                  className="flex items-center justify-between rounded-xl border border-border/70 bg-muted/25 px-4 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: item.color }}
-                      aria-hidden="true"
-                    />
-                    <span className="text-sm font-medium text-foreground">{item.name}</span>
-                  </div>
-                  <span className="text-sm font-semibold text-foreground">
-                    {numberFormatter.format(item.value)}
-                  </span>
+      <section className="grid gap-8 border-t border-border pt-12 md:grid-cols-[220px_1fr] md:gap-16">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">02</p>
+          <h2 className="mt-3 font-display text-2xl font-semibold tracking-[-0.03em] text-foreground">Campaign mix</h2>
+          <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground">Current status spread, kept quiet so anomalies stand out.</p>
+        </div>
+        <div className="grid items-center gap-8 md:grid-cols-[1fr_260px]">
+          <div className="divide-y divide-border border-y border-border">
+            {campaignChartData.map((item) => (
+              <div key={item.key} className="flex items-center justify-between py-5">
+                <div className="flex items-center gap-3">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} aria-hidden="true" />
+                  <span className="text-sm font-medium text-foreground">{item.name}</span>
                 </div>
-              ))}
-            </div>
-
-            <div className="relative h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    dataKey="value"
-                    innerRadius={58}
-                    outerRadius={82}
-                    paddingAngle={hasCampaignStatusData ? 3 : 0}
-                    strokeWidth={0}
-                  >
-                    {pieChartData.map((item) => (
-                      <Cell key={item.key} fill={item.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "var(--card)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 16,
-                      boxShadow: "0 8px 32px rgba(0, 0, 0, 0.18)",
-                      color: "var(--foreground)",
-                    }}
-                    formatter={(value, name) =>
-                      hasCampaignStatusData
-                        ? [
-                            numberFormatter.format(
-                              typeof (Array.isArray(value) ? value[0] : value) === "number"
-                                ? (Array.isArray(value) ? value[0] : value)
-                                : Number((Array.isArray(value) ? value[0] : value) ?? 0)
-                            ),
-                            typeof name === "string" ? name : "Status",
-                          ]
-                        : ["0", "No data"]
-                    }
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-semibold tracking-[-0.03em] text-foreground">
-                  {numberFormatter.format(stats.campaignsByStatus.active)}
-                </span>
-                <span className="mt-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  Active
-                </span>
+                <span className="text-2xl font-semibold tracking-[-0.04em] text-foreground">{numberFormatter.format(item.value)}</span>
               </div>
+            ))}
+          </div>
+          <div className="relative h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={pieChartData} dataKey="value" innerRadius={68} outerRadius={96} paddingAngle={hasCampaignStatusData ? 3 : 0} strokeWidth={0}>
+                  {pieChartData.map((item) => (<Cell key={item.key} fill={item.color} />))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: 0, boxShadow: "none", color: "var(--foreground)" }}
+                  formatter={(value, name) =>
+                    hasCampaignStatusData
+                      ? [numberFormatter.format(typeof (Array.isArray(value) ? value[0] : value) === "number" ? (Array.isArray(value) ? value[0] : value) : Number((Array.isArray(value) ? value[0] : value) ?? 0)), typeof name === "string" ? name : "Status"]
+                      : ["0", "No data"]
+                  }
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-4xl font-semibold tracking-[-0.04em] text-foreground">{numberFormatter.format(stats.campaignsByStatus.active)}</span>
+              <span className="mt-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">Active</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5 shadow-card">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">Recent Activity</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Latest product, campaign, and generated ad events</p>
-          </div>
-          <div className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-            {stats.recentActivity.length} items
-          </div>
+      <section className="grid gap-8 border-t border-border pt-12 md:grid-cols-[220px_1fr] md:gap-16">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">03</p>
+          <h2 className="mt-3 font-display text-2xl font-semibold tracking-[-0.03em] text-foreground">Latest movements</h2>
+          <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground">Products, campaigns, and generated ads in one editorial feed.</p>
         </div>
-
         {stats.recentActivity.length === 0 ? (
-          <div className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 px-6 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-              <ImageIcon className="h-5 w-5" aria-hidden="true" />
-            </div>
-            <h3 className="mt-4 text-base font-semibold text-foreground">No recent activity yet</h3>
-            <p className="mt-2 max-w-md text-sm text-muted-foreground">
-              Create products, update campaigns, or generate ads to populate this feed.
-            </p>
+          <div className="border-y border-dashed border-border py-16 text-center">
+            <h3 className="text-base font-semibold text-foreground">No recent activity yet</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Create products, update campaigns, or generate ads to populate this feed.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y divide-border border-y border-border">
             {stats.recentActivity.map((item, index) => {
               const Icon = getActivityIcon(item.type);
               return (
-                <div
-                  key={`${item.type}-${item.timestamp}-${index}`}
-                  className="flex items-center gap-4 rounded-xl border border-border/70 bg-muted/20 px-4 py-3"
-                >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-card text-primary shadow-[0_1px_2px_rgba(0,0,0,0.08)]">
+                <div key={`${item.type}-${item.timestamp}-${index}`} className="flex items-center gap-4 py-5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-border bg-card text-primary">
                     <Icon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {getActivityCopy(item)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatRelativeTime(item.timestamp)}
-                    </p>
+                    <p className="truncate text-sm font-medium text-foreground">{getActivityCopy(item)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{formatRelativeTime(item.timestamp)}</p>
                   </div>
                 </div>
               );
@@ -514,38 +412,23 @@ export default function DashboardPage() {
         )}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <Link
-          href="/campaign/new"
-          className="group rounded-2xl border border-border bg-card p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-            <MegaphoneIcon className="h-5 w-5" aria-hidden="true" />
-          </div>
-          <div className="mt-5 flex items-start justify-between gap-3">
+      <section className="grid gap-6 border-t border-border pt-12 md:grid-cols-2">
+        <Link href="/campaign/new" className="group border-y border-border py-6 transition-colors hover:border-primary/60">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Start</p>
+          <div className="mt-4 flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">New Campaign</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Launch a new AI-generated ad campaign from your existing products.
-              </p>
+              <h2 className="font-display text-2xl font-semibold tracking-[-0.03em] text-foreground">New campaign</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">Launch AI-generated ad concepts from existing products.</p>
             </div>
             <ArrowRightIcon className="mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" aria-hidden="true" />
           </div>
         </Link>
-
-        <Link
-          href="/product"
-          className="group rounded-2xl border border-border bg-card p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-            <PackageIcon className="h-5 w-5" aria-hidden="true" />
-          </div>
-          <div className="mt-5 flex items-start justify-between gap-3">
+        <Link href="/product" className="group border-y border-border py-6 transition-colors hover:border-primary/60">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Catalog</p>
+          <div className="mt-4 flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold tracking-[-0.02em] text-foreground">View Products</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Review your catalog, edit assets, and manage what campaigns can use.
-              </p>
+              <h2 className="font-display text-2xl font-semibold tracking-[-0.03em] text-foreground">View products</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">Review assets and manage what campaigns can use.</p>
             </div>
             <ArrowRightIcon className="mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary" aria-hidden="true" />
           </div>

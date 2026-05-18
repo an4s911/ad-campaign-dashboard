@@ -48,12 +48,12 @@ export default function StyleCard({
   return (
     <div
       onClick={hideActions && onSelect ? onSelect : undefined}
-      className={`group relative overflow-hidden rounded-2xl border bg-card shadow-card transition-all duration-200 hover:scale-[1.015] hover:shadow-card-hover ${
+      className={`group relative overflow-hidden border bg-card transition-colors duration-200 ${
         hideActions && onSelect ? "cursor-pointer" : ""
       } ${
         selected
-          ? "border-primary ring-1 ring-primary/30 shadow-[0_0_0_1px_rgba(91,91,214,0.2),0_16px_40px_rgba(91,91,214,0.12)]"
-          : "border-border hover:border-primary/30 hover:shadow-[0_0_0_1px_rgba(91,91,214,0.12),0_12px_30px_rgba(15,23,42,0.1)]"
+          ? "border-primary bg-primary/6 ring-1 ring-primary/25"
+          : "border-border hover:border-primary/35 hover:bg-card/80"
       }`}
       style={{ height: height || "auto" }}
     >

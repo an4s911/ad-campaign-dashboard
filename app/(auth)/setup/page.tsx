@@ -10,31 +10,30 @@ export default async function SetupPage() {
   if (userCount > 0) redirect("/");
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
-      {/* Background decoration */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-[40%] -right-[20%] h-[80vh] w-[80vh] rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-[30%] -left-[20%] h-[60vh] w-[60vh] rounded-full bg-primary/3 blur-3xl" />
-      </div>
-
-      <div className="absolute right-5 top-5 z-10">
+    <div className="min-h-screen bg-background px-4 py-6 md:px-8">
+      <div className="flex justify-end">
         <ThemeToggle />
       </div>
 
-      <div className="relative w-full max-w-100 animate-slide-up">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary shadow-[0_4px_16px_rgba(91,91,214,0.3)]">
-            <span className="text-lg font-bold text-primary-foreground">B</span>
-          </div>
-          <h1 className="text-2xl font-semibold tracking-[-0.02em] text-foreground">
-            Welcome to Bonmedia
+      <main className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-12 md:grid-cols-[1.1fr_420px]">
+        <section className="border-y border-border py-12">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Bonmedia</p>
+          <h1 className="mt-5 max-w-3xl font-display text-[4rem] font-semibold leading-[0.9] tracking-[-0.06em] text-foreground md:text-[6rem]">
+            Build the first account.
           </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Set up your admin account to get started
+          <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground">
+            Set admin access once, then start composing campaign work.
           </p>
-        </div>
-        <SetupForm />
-      </div>
+        </section>
+
+        <section className="w-full">
+          <div className="mb-6">
+            <h2 className="font-display text-3xl font-semibold tracking-[-0.04em] text-foreground">Welcome to Bonmedia</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Set up your admin account.</p>
+          </div>
+          <SetupForm />
+        </section>
+      </main>
     </div>
   );
 }
