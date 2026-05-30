@@ -238,13 +238,13 @@ export default function LocationTargeting({
         id: "pending-circle-fill",
         type: "fill",
         source: "pending-circle",
-        paint: { "fill-color": "#f97316", "fill-opacity": 0.15 },
+        paint: { "fill-color": "#0AA4EC", "fill-opacity": 0.15 },
       });
       map.addLayer({
         id: "pending-circle-outline",
         type: "line",
         source: "pending-circle",
-        paint: { "line-color": "#f97316", "line-width": 1.5, "line-opacity": 0.8 },
+        paint: { "line-color": "#0AA4EC", "line-width": 1.5, "line-opacity": 0.8 },
       });
     })();
   }, [pendingPin, radiusKm, mapLoaded]);
@@ -298,13 +298,13 @@ export default function LocationTargeting({
         id: `saved-circle-fill-${i}`,
         type: "fill",
         source: `saved-circle-${i}`,
-        paint: { "fill-color": "#3b82f6", "fill-opacity": 0.15 },
+        paint: { "fill-color": "#0AA4EC", "fill-opacity": 0.15 },
       });
       map.addLayer({
         id: `saved-circle-outline-${i}`,
         type: "line",
         source: `saved-circle-${i}`,
-        paint: { "line-color": "#3b82f6", "line-width": 1.5, "line-opacity": 0.8 },
+        paint: { "line-color": "#0AA4EC", "line-width": 1.5, "line-opacity": 0.8 },
       });
     });
   }, [locations, mapLoaded]);

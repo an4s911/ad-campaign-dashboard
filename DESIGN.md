@@ -1,8 +1,8 @@
-# Bonmedia Design System
+# Bon Creator Design System
 
 ## Direction
 
-Bonmedia feels sharp, composed, capable. It is a high-end campaign workspace, not generic SaaS. Chrome recedes; campaign work carries visual weight.
+Bon Creator feels sharp, composed, capable. It is a high-end campaign workspace, not generic SaaS. Chrome recedes; campaign work carries visual weight.
 
 ## Color
 

@@ -262,9 +262,9 @@ export default function DashboardPage() {
   }, []);
 
   const campaignChartData = [
-    { key: "draft", name: "Draft", value: stats.campaignsByStatus.draft, color: "#7E85A0" },
-    { key: "active", name: "Active", value: stats.campaignsByStatus.active, color: "#3DD68C" },
-    { key: "disabled", name: "Disabled", value: stats.campaignsByStatus.disabled, color: "#FF8A65" },
+    { key: "draft", name: "Draft", value: stats.campaignsByStatus.draft, color: "#5A7184" },
+    { key: "active", name: "Active", value: stats.campaignsByStatus.active, color: "#0AA4EC" },
+    { key: "disabled", name: "Disabled", value: stats.campaignsByStatus.disabled, color: "#E4A64F" },
   ];
 
   const hasCampaignStatusData = campaignChartData.some((item) => item.value > 0);

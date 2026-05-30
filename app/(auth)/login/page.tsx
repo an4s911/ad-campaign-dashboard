@@ -27,7 +27,7 @@ export default async function LoginPage({
 
       <main className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-12 md:grid-cols-[1.1fr_420px]">
         <section className="border-y border-border py-12">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Bonmedia</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Bon Creator</p>
           <h1 className="mt-5 max-w-3xl font-display text-[4rem] font-semibold leading-[0.9] tracking-[-0.06em] text-foreground md:text-[6rem]">
             Campaign work, composed.
           </h1>

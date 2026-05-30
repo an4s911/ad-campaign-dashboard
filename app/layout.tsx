@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, Geist_Mono, Fraunces } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
 });
 
@@ -13,20 +13,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Bonmedia \u2014 Ad Campaign Dashboard",
+  title: "Bon Creator \u2014 Ad Campaign Dashboard",
   description: "Create and manage AI-powered ad campaigns",
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F7F8FC" },
-    { media: "(prefers-color-scheme: dark)", color: "#0B0E17" },
+    { media: "(prefers-color-scheme: light)", color: "#F0F6FA" },
+    { media: "(prefers-color-scheme: dark)", color: "#030E1D" },
   ],
 };
 
@@ -52,7 +47,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${outfit.variable} ${geistMono.variable} ${fraunces.variable} font-sans antialiased`}
+        className={`${geist.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <ThemeProvider>
           {children}

@@ -100,7 +100,7 @@ export default function Sidebar({
         {/* Brand */}
         <div className="px-6 pb-7 pt-8">
           <Link href="/dashboard" className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <p className="font-display text-2xl font-semibold leading-none tracking-[-0.04em] text-foreground">Bonmedia</p>
+            <p className="font-display text-2xl font-semibold leading-none tracking-[-0.04em] text-foreground">Bon Creator</p>
             <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Campaign atelier</p>
           </Link>
         </div>
