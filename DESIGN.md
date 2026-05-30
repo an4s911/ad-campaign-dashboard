@@ -6,18 +6,19 @@ Bon Creator feels sharp, composed, capable. It is a high-end campaign workspace,
 
 ## Color
 
-Strategy: restrained editorial. Warm tinted neutrals plus oxblood accent used sparingly.
+Source: Bon Intelligence brand book. Cool blue palette.
 
-- Background: warm off-white / ink, never pure white or black.
-- Primary: oxblood (`--primary`) for main actions, active nav, section numbers, selected states.
-- Accent use stays below 10% of a surface. No purple glow, no gradient text, no decorative glass.
+- Background: cool white (`#F0F6FA`) light / dark navy (`#030E1D`) dark. Never warm tones.
+- Primary: brand light blue `#0AA4EC` (`--primary`) for actions, active nav, links, focus rings.
+- Accent use stays below 10% of a surface. No gradient text, no decorative glass.
 - Success, warning, error remain functional and quiet.
+
+Key tokens: `--primary #0AA4EC`, `--background #F0F6FA / #030E1D`, `--sidebar #E8F1F8 / #061425`.
 
 ## Typography
 
-- Display: Fraunces via `--font-display`, used for page heroes and section titles.
-- Body/UI: Outfit via `--font-sans`.
-- Mono: Geist Mono for section numbers and tabular details.
+- Display + Body/UI: Geist via `--font-display` and `--font-sans` (grotesque, no serif).
+- Mono: Geist Mono via `--font-mono` for section numbers, tabular details, eyebrow accents.
 - Hero titles use tight tracking and large scale: `text-[3rem] md:text-[4rem]`, occasionally larger on auth.
 - Section titles use display at `text-2xl` with tight tracking.
 
@@ -37,7 +38,7 @@ Cards are reserved for content tiles where tile shape matters: product visuals, 
 
 ### Sidebar
 
-- Serif wordmark, quiet metadata label.
+- Grotesque wordmark, quiet metadata label.
 - Active nav uses left border accent and faint tint.
 - No logo box, no glow, no avatar chip.
 
@@ -79,5 +80,4 @@ Cards are reserved for content tiles where tile shape matters: product visuals, 
 - No hero-metric template.
 - No identical icon-card grids.
 - No card chrome around every section.
-- No purple glow shadows.
 - No `window.confirm`.
